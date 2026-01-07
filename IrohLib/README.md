@@ -273,6 +273,89 @@ These Swift demos are fully compatible with:
 - Python applications using `iroh-ffi`
 - The [GossipDemo](https://github.com/example/GossipDemo) reference implementation
 
+## Building from Source
+
+IrohLib requires a pre-built `Iroh.xcframework` containing the compiled Rust library. This is not included in the git repository due to its size (~280MB per architecture).
+
+### Prerequisites
+
+- Rust toolchain (`rustup`)
+- iOS and macOS targets:
+  ```bash
+  rustup target add aarch64-apple-ios
+  rustup target add aarch64-apple-ios-sim
+  rustup target add x86_64-apple-ios
+  rustup target add aarch64-apple-darwin
+  ```
+
+### Build the xcframework
+
+From the repository root:
+
+```bash
+./make_swift.sh
+```
+
+This will:
+1. Compile the Rust library for all Apple platforms
+2. Generate the xcframework in `IrohLib/artifacts/Iroh.xcframework`
+3. Generate Swift bindings via UniFFI
+
+After building, you can use IrohLib as a local package dependency.
+
+## Publishing Binary Releases
+
+To allow users to consume IrohLib without building from source, publish the xcframework as a GitHub release.
+
+### 1. Build and zip the xcframework
+
+```bash
+./make_swift.sh
+cd IrohLib/artifacts
+zip -r Iroh.xcframework.zip Iroh.xcframework
+shasum -a 256 Iroh.xcframework.zip
+# Note the checksum output
+```
+
+### 2. Create GitHub release
+
+1. Create a new release on GitHub (e.g., `v0.95.0`)
+2. Attach `Iroh.xcframework.zip` to the release
+
+### 3. Update Package.swift for binary distribution
+
+Change the binary target from local path to URL:
+
+```swift
+// Before (local path - for development)
+.binaryTarget(
+    name: "Iroh",
+    path: "artifacts/Iroh.xcframework")
+
+// After (remote URL - for distribution)
+.binaryTarget(
+    name: "Iroh",
+    url: "https://github.com/kylehowells/iroh-ffi/releases/download/v0.95.0/Iroh.xcframework.zip",
+    checksum: "YOUR_SHA256_CHECKSUM_HERE")
+```
+
+### 4. Tag and push
+
+```bash
+git add IrohLib/Package.swift
+git commit -m "Release v0.95.0 with binary xcframework"
+git tag v0.95.0
+git push origin main --tags
+```
+
+Now users can add IrohLib directly from GitHub:
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/kylehowells/iroh-ffi", from: "0.95.0")
+]
+```
+
 ## License
 
 MIT OR Apache-2.0
