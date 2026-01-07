@@ -8,7 +8,7 @@ Cross-language demo applications demonstrating Gossip, Blob, and Document functi
 |----------|------|--------|-------|
 | **Gossip** | `gossip_chat.rs` | `gossip_chat.py` | `GossipChat.swift` |
 | **Blobs** | `blob_demo.rs` | `blob_demo.py` | `BlobDemo.swift` |
-| **Docs** | `doc_demo.rs` | `doc_demo.py` | `IrohLib/Sources/DocDemo/` |
+| **Docs** | `doc_demo.rs` | `doc_demo.py` | `DocDemo.swift` |
 
 ## Cross-Language Interoperability
 
@@ -126,6 +126,27 @@ All demos support interactive mode after initialization:
 - `get <key>` - Get value by key
 - `list` - List all entries
 - `/quit` - Exit
+
+## Automated Testing
+
+The `tests/` directory contains automated cross-language integration tests:
+
+```bash
+# Run all tests
+./examples/tests/run_all_tests.sh
+
+# Run specific test suites
+./examples/tests/run_all_tests.sh gossip   # Gossip messaging tests
+./examples/tests/run_all_tests.sh blobs    # Blob transfer tests
+./examples/tests/run_all_tests.sh docs     # Document sync tests
+./examples/tests/run_all_tests.sh sync     # Verify Swift file sync
+
+# Run individual test scripts
+./examples/tests/test_gossip.sh
+./examples/tests/test_blobs.sh
+./examples/tests/test_docs.sh
+./examples/tests/verify_swift_sync.sh
+```
 
 ## External Compatibility
 

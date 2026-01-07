@@ -125,7 +125,7 @@ func sendFile(node: Iroh, filePath: String) async throws {
 func sendBytes(node: Iroh, data: Data) async throws {
     print("Adding \(data.count) bytes of data...")
 
-    let outcome = try await node.blobs().addBytes(bytes: [UInt8](data))
+    let outcome = try await node.blobs().addBytes(bytes: data)
 
     print("Added blob with hash: \(outcome.hash)")
     print("Format: \(outcome.format)")
@@ -197,6 +197,10 @@ func receiveBlob(node: Iroh, ticketStr: String, destPath: String) async throws {
 @main
 struct BlobDemo {
     static func main() async throws {
+        // Force unbuffered output for terminal visibility
+        setbuf(stdout, nil)
+        setbuf(stderr, nil)
+
         let args = Array(CommandLine.arguments.dropFirst())
 
         if args.isEmpty {
@@ -207,6 +211,7 @@ struct BlobDemo {
         let command = args[0]
 
         print("=== Iroh Blob Demo (Swift) ===\n")
+        fflush(stdout)
 
         // Create node with persistent storage in temp directory
         let tempDir = FileManager.default.temporaryDirectory
@@ -214,16 +219,19 @@ struct BlobDemo {
         try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
 
         print("Creating node at \(tempDir.path)...")
+        fflush(stdout)
         let node = try await Iroh.persistent(path: tempDir.path)
 
         // Wait for node to be online
         print("Waiting for node to come online...")
+        fflush(stdout)
         try await node.net().waitOnline()
 
         let myId = node.net().nodeId()
         let myAddr = node.net().nodeAddr()
         print("Node ID: \(myId)")
         print("Relay URL: \(myAddr.relayUrl() ?? "none")\n")
+        fflush(stdout)
 
         switch command {
         case "send":
@@ -235,8 +243,9 @@ struct BlobDemo {
             try await sendFile(node: node, filePath: filePath)
 
             print("\nWaiting for peer to download... Press Ctrl+C to exit.")
-            // Keep running
-            dispatchMain()
+            fflush(stdout)
+            // Keep running with a very long sleep to handle background/pipe scenarios
+            Thread.sleep(forTimeInterval: 3600) // Wait 1 hour
 
         case "send-bytes":
             guard args.count >= 2 else {
@@ -247,8 +256,9 @@ struct BlobDemo {
             try await sendBytes(node: node, data: text.data(using: .utf8)!)
 
             print("\nWaiting for peer to download... Press Ctrl+C to exit.")
-            // Keep running
-            dispatchMain()
+            fflush(stdout)
+            // Keep running with a very long sleep to handle background/pipe scenarios
+            Thread.sleep(forTimeInterval: 3600) // Wait 1 hour
 
         case "receive":
             guard args.count >= 3 else {
