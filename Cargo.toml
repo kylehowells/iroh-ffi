@@ -1,6 +1,6 @@
 [package]
 name = "iroh-ffi"
-version = "0.35.0"
+version = "0.95.0"
 edition = "2021"
 publish = false
 readme = "README.md"
@@ -11,60 +11,66 @@ repository = "https://github.com/n0-computer/iroh-ffi"
 homepage = "https://iroh.computer"
 documentation = "https://iroh.computer/docs"
 
-rust-version = "1.83"
+rust-version = "1.85"
 
 [workspace]
-members = ["iroh-js"]
+# Temporarily disabled during 0.95 migration
+# members = ["iroh-js"]
 
 [package.metadata.maturin]
 name = "iroh"
 
 [lib]
 name = "iroh_ffi"
-crate-type = ["staticlib", "cdylib"]
+crate-type = ["lib", "staticlib", "cdylib"]
 
 [[bin]]
 name = "uniffi-bindgen"
 path = "uniffi-bindgen.rs"
 
+[[example]]
+name = "gossip_chat"
+path = "examples/gossip_chat.rs"
+
 [dependencies]
-anyhow = "1.0.69"
+anyhow = "1.0.95"
 async-trait = "0.1.80"
 blake3 = "1.3.3"
 bytes = "1"
 data-encoding = { version = "2.3.3" }
-iroh = { version = "0.35" }
-iroh-base = { version = "0.35", features = ["ticket"] }
+iroh = { version = "0.95" }
+iroh-base = { version = "0.95" }
 iroh-io = { version = "0.6" }
-iroh-gossip = { version = "0.35", features = ["rpc"] }
-iroh-docs = { version = "0.35", features = ["rpc"] }
-iroh-blobs = { version = "0.35", features = ["rpc"] }
-iroh-metrics = { version = "0.34" }
-iroh-node-util = { version = "0.35", features = [] }
+iroh-gossip = { version = "0.95" }
+iroh-docs = { version = "0.95" }
+iroh-blobs = { version = "0.97" }
+iroh-metrics = { version = "0.37" }
+iroh-tickets = { version = "0.2" }
+n0-future = "0.3.0"
+n0-snafu = "0.2"
 libc = "0.2.141"
 num_cpus = { version = "1.15.0" }
-range-collections = "0.4.0"
-thiserror = "1.0.44"
-tokio = "1.25.0"
+thiserror = "2"
+tokio = "1.44"
 tokio-util = { version = "0.7", features = ["io-util", "io", "rt"] }
 uniffi = { version = "0.28.0", features = ["cli", "tokio"] }
-url = "2.4"
+url = "2.5"
 futures = "0.3.28"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.17" }
-serde = { version = "1.0.196", features = ["derive"] }
+serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.113"
-futures-lite = "2.3.0"
-derive_more = { version = "1.0.0", features = ["debug"] }
-quic-rpc = "0.20"
-rand = "0.8"
+futures-lite = "2.6.0"
+derive_more = { version = "2.0.1", features = ["debug", "display", "from"] }
+rand = "0.9"
 
 
 [dev-dependencies]
-rand = "0.8"
+rand = "0.9"
 tempfile = "3.4"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 tokio = { version = "1", features = ["full"] }
+blake3 = "1.3.3"
 
 [build-dependencies]
 uniffi = { version = "0.28.0", features = ["build"] }

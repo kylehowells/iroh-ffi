@@ -5,53 +5,9 @@ use crate::blob::{BlobDownloadOptions, BlobFormat, Hash};
 use crate::doc::NodeAddr;
 use crate::error::IrohError;
 
-/// A token containing information for establishing a connection to a node.
-///
-/// This allows establishing a connection to the node in most circumstances where it is
-/// possible to do so.
-///
-/// It is a single item which can be easily serialized and deserialized.
-#[derive(Debug, uniffi::Object)]
-#[uniffi::export(Display)]
-pub struct NodeTicket(iroh_base::ticket::NodeTicket);
-
-impl From<iroh_base::ticket::NodeTicket> for NodeTicket {
-    fn from(ticket: iroh_base::ticket::NodeTicket) -> Self {
-        NodeTicket(ticket)
-    }
-}
-
-impl std::fmt::Display for NodeTicket {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-#[uniffi::export]
-impl NodeTicket {
-    /// Wrap the given [`NodeAddr`] as a [`NodeTicket`].
-    ///
-    /// The returned ticket can easily be deserialized using its string presentation, and
-    /// later parsed again using [`Self::parse`].
-    #[uniffi::constructor]
-    pub fn new(addr: &NodeAddr) -> Result<Self, IrohError> {
-        let inner = TryInto::<iroh::NodeAddr>::try_into(addr.clone())?;
-        Ok(iroh_base::ticket::NodeTicket::new(inner).into())
-    }
-
-    /// Parse back a [`NodeTicket`] from its string presentation.
-    #[uniffi::constructor]
-    pub fn parse(str: String) -> Result<Self, IrohError> {
-        let ticket = iroh_base::ticket::NodeTicket::from_str(&str).map_err(anyhow::Error::from)?;
-        Ok(NodeTicket(ticket))
-    }
-
-    /// The [`NodeAddr`] of the provider for this ticket.
-    pub fn node_addr(&self) -> Arc<NodeAddr> {
-        let addr = self.0.node_addr().clone();
-        Arc::new(addr.into())
-    }
-}
+// Note: NodeTicket has been removed in iroh 0.95 as tickets are now handled via iroh_tickets
+// The main ticket types are now BlobTicket (iroh_blobs::ticket) and DocTicket (iroh_docs)
+// EndpointAddr (formerly NodeAddr) can be serialized directly as needed
 
 /// A token containing everything to get a file from the provider.
 ///
@@ -87,7 +43,7 @@ impl BlobTicket {
 
     /// The [`NodeAddr`] of the provider for this ticket.
     pub fn node_addr(&self) -> Arc<NodeAddr> {
-        let addr = self.0.node_addr().clone();
+        let addr = self.0.addr().clone();
         Arc::new(addr.into())
     }
 
@@ -102,15 +58,13 @@ impl BlobTicket {
     }
 
     /// Convert this ticket into input parameters for a call to blobs_download
-    pub fn as_download_options(&self) -> Arc<BlobDownloadOptions> {
-        let r: BlobDownloadOptions = iroh_blobs::rpc::client::blobs::DownloadOptions {
-            format: self.0.format(),
-            nodes: vec![self.0.node_addr().clone()],
-            tag: iroh_blobs::util::SetTagOption::Auto,
-            mode: iroh_blobs::net_protocol::DownloadMode::Direct,
-        }
-        .into();
-        Arc::new(r)
+    pub fn as_download_options(&self) -> Result<Arc<BlobDownloadOptions>, IrohError> {
+        let addr: NodeAddr = self.0.addr().clone().into();
+        Ok(Arc::new(BlobDownloadOptions {
+            format: self.0.format().into(),
+            node: addr,
+            tag: crate::blob::SetTagOption::Auto,
+        }))
     }
 }
 
@@ -129,15 +83,15 @@ pub enum AddrInfoOptions {
     Addresses,
 }
 
-impl From<AddrInfoOptions> for iroh_docs::rpc::AddrInfoOptions {
-    fn from(options: AddrInfoOptions) -> iroh_docs::rpc::AddrInfoOptions {
+impl From<AddrInfoOptions> for iroh_docs::api::protocol::AddrInfoOptions {
+    fn from(options: AddrInfoOptions) -> iroh_docs::api::protocol::AddrInfoOptions {
         match options {
-            AddrInfoOptions::Id => iroh_docs::rpc::AddrInfoOptions::Id,
+            AddrInfoOptions::Id => iroh_docs::api::protocol::AddrInfoOptions::Id,
             AddrInfoOptions::RelayAndAddresses => {
-                iroh_docs::rpc::AddrInfoOptions::RelayAndAddresses
+                iroh_docs::api::protocol::AddrInfoOptions::RelayAndAddresses
             }
-            AddrInfoOptions::Relay => iroh_docs::rpc::AddrInfoOptions::Relay,
-            AddrInfoOptions::Addresses => iroh_docs::rpc::AddrInfoOptions::Addresses,
+            AddrInfoOptions::Relay => iroh_docs::api::protocol::AddrInfoOptions::Relay,
+            AddrInfoOptions::Addresses => iroh_docs::api::protocol::AddrInfoOptions::Addresses,
         }
     }
 }

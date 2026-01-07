@@ -2,11 +2,9 @@ use std::{path::PathBuf, str::FromStr, sync::Arc, time::SystemTime};
 
 use bytes::Bytes;
 use futures::{StreamExt, TryStreamExt};
-use quic_rpc::transport::flume::FlumeConnector;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-use crate::DocsClient;
 use crate::{
     ticket::AddrInfoOptions, AuthorId, CallbackError, DocTicket, Hash, Iroh, IrohError, PublicKey,
 };
@@ -31,17 +29,17 @@ impl From<iroh_docs::CapabilityKind> for CapabilityKind {
 /// Iroh docs client.
 #[derive(uniffi::Object)]
 pub struct Docs {
-    client: DocsClient,
+    api: iroh_docs::api::DocsApi,
+    blobs: iroh_blobs::api::Store,
 }
-
-type MemConnector = FlumeConnector<iroh_docs::rpc::proto::Response, iroh_docs::rpc::proto::Request>;
 
 #[uniffi::export]
 impl Iroh {
-    /// Access to docs specific funtionaliy.
+    /// Access to docs specific functionality.
     pub fn docs(&self) -> Docs {
         Docs {
-            client: self.docs_client.clone().expect("missing docs"),
+            api: self.docs.clone().expect("missing docs"),
+            blobs: self.store.clone(),
         }
     }
 }
@@ -51,16 +49,18 @@ impl Docs {
     /// Create a new doc.
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn create(&self) -> Result<Arc<Doc>, IrohError> {
-        let doc = self.client.create().await?;
+        let doc = self.api.create().await
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
 
-        Ok(Arc::new(Doc { inner: doc }))
+        Ok(Arc::new(Doc { inner: doc, blobs: self.blobs.clone() }))
     }
 
     /// Join and sync with an already existing document.
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn join(&self, ticket: &DocTicket) -> Result<Arc<Doc>, IrohError> {
-        let doc = self.client.import(ticket.clone().into()).await?;
-        Ok(Arc::new(Doc { inner: doc }))
+        let doc = self.api.import(ticket.clone().into()).await
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        Ok(Arc::new(Doc { inner: doc, blobs: self.blobs.clone() }))
     }
 
     /// Join and sync with an already existing document and subscribe to events on that document.
@@ -71,9 +71,10 @@ impl Docs {
         cb: Arc<dyn SubscribeCallback>,
     ) -> Result<Arc<Doc>, IrohError> {
         let (doc, mut stream) = self
-            .client
+            .api
             .import_and_subscribe(ticket.clone().into())
-            .await?;
+            .await
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
 
         tokio::spawn(async move {
             while let Some(event) = stream.next().await {
@@ -90,22 +91,24 @@ impl Docs {
             }
         });
 
-        Ok(Arc::new(Doc { inner: doc }))
+        Ok(Arc::new(Doc { inner: doc, blobs: self.blobs.clone() }))
     }
 
     /// List all the docs we have access to on this node.
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn list(&self) -> Result<Vec<NamespaceAndCapability>, IrohError> {
         let docs = self
-            .client
+            .api
             .list()
-            .await?
+            .await
+            .map_err(|e| anyhow::anyhow!("{e}"))?
             .map_ok(|(namespace, capability)| NamespaceAndCapability {
                 namespace: namespace.to_string(),
                 capability: capability.into(),
             })
             .try_collect::<Vec<_>>()
-            .await?;
+            .await
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
 
         Ok(docs)
     }
@@ -116,9 +119,10 @@ impl Docs {
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn open(&self, id: String) -> Result<Option<Arc<Doc>>, IrohError> {
         let namespace_id = iroh_docs::NamespaceId::from_str(&id)?;
-        let doc = self.client.open(namespace_id).await?;
+        let doc = self.api.open(namespace_id).await
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
 
-        Ok(doc.map(|d| Arc::new(Doc { inner: d })))
+        Ok(doc.map(|d| Arc::new(Doc { inner: d, blobs: self.blobs.clone() })))
     }
 
     /// Delete a document from the local node.
@@ -129,7 +133,7 @@ impl Docs {
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn drop_doc(&self, doc_id: String) -> Result<(), IrohError> {
         let doc_id = iroh_docs::NamespaceId::from_str(&doc_id)?;
-        self.client.drop_doc(doc_id).await.map_err(IrohError::from)
+        self.api.drop_doc(doc_id).await.map_err(|e| anyhow::anyhow!("{e}").into())
     }
 }
 
@@ -145,7 +149,8 @@ pub struct NamespaceAndCapability {
 /// A representation of a mutable, synchronizable key-value store.
 #[derive(Clone, uniffi::Object)]
 pub struct Doc {
-    pub(crate) inner: iroh_docs::rpc::client::docs::Doc<MemConnector>,
+    pub(crate) inner: iroh_docs::api::Doc,
+    pub(crate) blobs: iroh_blobs::api::Store,
 }
 
 #[uniffi::export]
@@ -197,13 +202,17 @@ impl Doc {
         in_place: bool,
         cb: Option<Arc<dyn DocImportFileCallback>>,
     ) -> Result<(), IrohError> {
+        let import_mode = if in_place {
+            iroh_blobs::api::blobs::ImportMode::TryReference
+        } else {
+            iroh_blobs::api::blobs::ImportMode::Copy
+        };
         let mut stream = self
             .inner
-            .import_file(author.0, Bytes::from(key), PathBuf::from(path), in_place)
+            .import_file(&self.blobs, author.0, Bytes::from(key), PathBuf::from(path), import_mode)
             .await?;
 
         while let Some(progress) = stream.next().await {
-            let progress = progress?;
             if let Some(ref cb) = cb {
                 cb.progress(Arc::new(progress.into())).await?;
             }
@@ -219,20 +228,23 @@ impl Doc {
         path: String,
         cb: Option<Arc<dyn DocExportFileCallback>>,
     ) -> Result<(), IrohError> {
-        let mut stream = self
+        let export_progress = self
             .inner
             .export_file(
+                &self.blobs,
                 entry.0.clone(),
                 std::path::PathBuf::from(path),
                 // TODO(b5) - plumb up the export mode, currently it's always copy
-                iroh_blobs::store::ExportMode::Copy,
+                iroh_blobs::api::blobs::ExportMode::Copy,
             )
             .await?;
-        while let Some(progress) = stream.next().await {
-            let progress = progress?;
-            if let Some(ref cb) = cb {
-                cb.progress(Arc::new(progress.into())).await?;
-            }
+
+        // Use the finish() method which awaits and gives result
+        export_progress.finish().await.map_err(|e| anyhow::anyhow!("{e}"))?;
+
+        // Signal completion to callback
+        if let Some(ref cb) = cb {
+            cb.progress(Arc::new(DocExportProgress::AllDone)).await?;
         }
         Ok(())
     }
@@ -314,13 +326,12 @@ impl Doc {
     /// Start to sync this document with a list of peers.
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn start_sync(&self, peers: Vec<Arc<NodeAddr>>) -> Result<(), IrohError> {
+        let endpoint_addrs: Vec<iroh::EndpointAddr> = peers
+            .into_iter()
+            .map(|p| (*p).clone().try_into())
+            .collect::<Result<Vec<_>, anyhow::Error>>()?;
         self.inner
-            .start_sync(
-                peers
-                    .into_iter()
-                    .map(|p| (*p).clone().try_into())
-                    .collect::<Result<Vec<_>, IrohError>>()?,
-            )
+            .start_sync(endpoint_addrs)
             .await?;
         Ok(())
     }
@@ -549,36 +560,34 @@ impl NodeAddr {
     }
 }
 
-impl TryFrom<NodeAddr> for iroh::NodeAddr {
-    type Error = IrohError;
+impl TryFrom<NodeAddr> for iroh::EndpointAddr {
+    type Error = anyhow::Error;
     fn try_from(value: NodeAddr) -> Result<Self, Self::Error> {
-        let mut node_addr = iroh::NodeAddr::new((&*value.node_id).into());
+        let mut endpoint_addr = iroh::EndpointAddr::new((&*value.node_id).into());
         let addresses = value
             .direct_addresses()
             .into_iter()
-            .map(|addr| {
-                std::net::SocketAddr::from_str(&addr).map_err(|e| anyhow::Error::from(e).into())
-            })
-            .collect::<Result<Vec<_>, IrohError>>()?;
+            .map(|addr| std::net::SocketAddr::from_str(&addr))
+            .collect::<Result<Vec<_>, _>>()?;
 
         if let Some(derp_url) = value.relay_url() {
-            let url = url::Url::parse(&derp_url).map_err(anyhow::Error::from)?;
-
-            node_addr = node_addr.with_relay_url(url.into());
+            let url = url::Url::parse(&derp_url)?;
+            endpoint_addr = endpoint_addr.with_relay_url(url.into());
         }
-        node_addr = node_addr.with_direct_addresses(addresses);
-        Ok(node_addr)
+        for addr in addresses {
+            endpoint_addr = endpoint_addr.with_ip_addr(addr);
+        }
+        Ok(endpoint_addr)
     }
 }
 
-impl From<iroh::NodeAddr> for NodeAddr {
-    fn from(value: iroh::NodeAddr) -> Self {
+impl From<iroh::EndpointAddr> for NodeAddr {
+    fn from(value: iroh::EndpointAddr) -> Self {
         NodeAddr {
-            node_id: Arc::new(value.node_id.into()),
-            relay_url: value.relay_url.map(|url| url.to_string()),
+            node_id: Arc::new(value.id.into()),
+            relay_url: value.relay_urls().next().map(|url| url.to_string()),
             addresses: value
-                .direct_addresses
-                .into_iter()
+                .ip_addrs()
                 .map(|d| d.to_string())
                 .collect(),
         }
@@ -594,11 +603,11 @@ pub enum ShareMode {
     Write,
 }
 
-impl From<ShareMode> for iroh_docs::rpc::client::docs::ShareMode {
+impl From<ShareMode> for iroh_docs::api::protocol::ShareMode {
     fn from(mode: ShareMode) -> Self {
         match mode {
-            ShareMode::Read => iroh_docs::rpc::client::docs::ShareMode::Read,
-            ShareMode::Write => iroh_docs::rpc::client::docs::ShareMode::Write,
+            ShareMode::Read => iroh_docs::api::protocol::ShareMode::Read,
+            ShareMode::Write => iroh_docs::api::protocol::ShareMode::Write,
         }
     }
 }
@@ -609,10 +618,10 @@ impl From<ShareMode> for iroh_docs::rpc::client::docs::ShareMode {
 /// namespace id. Its value is the 32-byte BLAKE3 [`hash`]
 /// of the entry's content data, the size of this content data, and a timestamp.
 #[derive(Debug, Clone, Serialize, Deserialize, uniffi::Object)]
-pub struct Entry(pub(crate) iroh_docs::rpc::client::docs::Entry);
+pub struct Entry(pub(crate) iroh_docs::Entry);
 
-impl From<iroh_docs::rpc::client::docs::Entry> for Entry {
-    fn from(e: iroh_docs::rpc::client::docs::Entry) -> Self {
+impl From<iroh_docs::Entry> for Entry {
+    fn from(e: iroh_docs::Entry) -> Self {
         Entry(e)
     }
 }
@@ -1086,15 +1095,15 @@ impl LiveEvent {
     }
 }
 
-impl From<iroh_docs::rpc::client::docs::LiveEvent> for LiveEvent {
-    fn from(value: iroh_docs::rpc::client::docs::LiveEvent) -> Self {
+impl From<iroh_docs::engine::LiveEvent> for LiveEvent {
+    fn from(value: iroh_docs::engine::LiveEvent) -> Self {
         match value {
-            iroh_docs::rpc::client::docs::LiveEvent::InsertLocal { entry } => {
+            iroh_docs::engine::LiveEvent::InsertLocal { entry } => {
                 LiveEvent::InsertLocal {
                     entry: entry.into(),
                 }
             }
-            iroh_docs::rpc::client::docs::LiveEvent::InsertRemote {
+            iroh_docs::engine::LiveEvent::InsertRemote {
                 from,
                 entry,
                 content_status,
@@ -1103,19 +1112,19 @@ impl From<iroh_docs::rpc::client::docs::LiveEvent> for LiveEvent {
                 entry: entry.into(),
                 content_status: content_status.into(),
             },
-            iroh_docs::rpc::client::docs::LiveEvent::ContentReady { hash } => {
+            iroh_docs::engine::LiveEvent::ContentReady { hash } => {
                 LiveEvent::ContentReady { hash: hash.into() }
             }
-            iroh_docs::rpc::client::docs::LiveEvent::NeighborUp(key) => {
+            iroh_docs::engine::LiveEvent::NeighborUp(key) => {
                 LiveEvent::NeighborUp(key.into())
             }
-            iroh_docs::rpc::client::docs::LiveEvent::NeighborDown(key) => {
+            iroh_docs::engine::LiveEvent::NeighborDown(key) => {
                 LiveEvent::NeighborDown(key.into())
             }
-            iroh_docs::rpc::client::docs::LiveEvent::SyncFinished(e) => {
+            iroh_docs::engine::LiveEvent::SyncFinished(e) => {
                 LiveEvent::SyncFinished(e.into())
             }
-            iroh_docs::rpc::client::docs::LiveEvent::PendingContentReady => {
+            iroh_docs::engine::LiveEvent::PendingContentReady => {
                 LiveEvent::PendingContentReady
             }
         }
@@ -1137,17 +1146,14 @@ pub struct SyncEvent {
     pub result: Option<String>,
 }
 
-impl From<iroh_docs::rpc::client::docs::SyncEvent> for SyncEvent {
-    fn from(value: iroh_docs::rpc::client::docs::SyncEvent) -> Self {
+impl From<iroh_docs::engine::SyncEvent> for SyncEvent {
+    fn from(value: iroh_docs::engine::SyncEvent) -> Self {
         SyncEvent {
             peer: Arc::new(value.peer.into()),
             origin: value.origin.into(),
             finished: value.finished,
             started: value.started,
-            result: match value.result {
-                Ok(_) => None,
-                Err(err) => Some(err),
-            },
+            result: value.result.err(),
         }
     }
 }
@@ -1165,13 +1171,13 @@ pub enum SyncReason {
     Resync,
 }
 
-impl From<iroh_docs::rpc::client::docs::SyncReason> for SyncReason {
-    fn from(value: iroh_docs::rpc::client::docs::SyncReason) -> Self {
+impl From<iroh_docs::engine::SyncReason> for SyncReason {
+    fn from(value: iroh_docs::engine::SyncReason) -> Self {
         match value {
-            iroh_docs::rpc::client::docs::SyncReason::DirectJoin => Self::DirectJoin,
-            iroh_docs::rpc::client::docs::SyncReason::NewNeighbor => Self::NewNeighbor,
-            iroh_docs::rpc::client::docs::SyncReason::SyncReport => Self::SyncReport,
-            iroh_docs::rpc::client::docs::SyncReason::Resync => Self::Resync,
+            iroh_docs::engine::SyncReason::DirectJoin => Self::DirectJoin,
+            iroh_docs::engine::SyncReason::NewNeighbor => Self::NewNeighbor,
+            iroh_docs::engine::SyncReason::SyncReport => Self::SyncReport,
+            iroh_docs::engine::SyncReason::Resync => Self::Resync,
         }
     }
 }
@@ -1185,13 +1191,13 @@ pub enum Origin {
     Accept,
 }
 
-impl From<iroh_docs::rpc::client::docs::Origin> for Origin {
-    fn from(value: iroh_docs::rpc::client::docs::Origin) -> Self {
+impl From<iroh_docs::engine::Origin> for Origin {
+    fn from(value: iroh_docs::engine::Origin) -> Self {
         match value {
-            iroh_docs::rpc::client::docs::Origin::Connect(reason) => Self::Connect {
+            iroh_docs::engine::Origin::Connect(reason) => Self::Connect {
                 reason: reason.into(),
             },
-            iroh_docs::rpc::client::docs::Origin::Accept => Self::Accept,
+            iroh_docs::engine::Origin::Accept => Self::Accept,
         }
     }
 }
@@ -1314,25 +1320,36 @@ pub enum DocImportProgress {
     Abort(DocImportProgressAbort),
 }
 
-impl From<iroh_docs::rpc::client::docs::ImportProgress> for DocImportProgress {
-    fn from(value: iroh_docs::rpc::client::docs::ImportProgress) -> Self {
+impl From<iroh_docs::api::ImportFileProgressItem> for DocImportProgress {
+    fn from(value: iroh_docs::api::ImportFileProgressItem) -> Self {
         match value {
-            iroh_docs::rpc::client::docs::ImportProgress::Found { id, name, size } => {
-                DocImportProgress::Found(DocImportProgressFound { id, name, size })
+            iroh_docs::api::ImportFileProgressItem::Blobs(add_progress) => {
+                // Map blob add progress to doc import progress
+                use iroh_blobs::api::blobs::AddProgressItem;
+                match add_progress {
+                    AddProgressItem::Size(size) => {
+                        DocImportProgress::Found(DocImportProgressFound {
+                            id: 0,
+                            name: String::new(),
+                            size
+                        })
+                    }
+                    AddProgressItem::CopyProgress(offset) => {
+                        DocImportProgress::Progress(DocImportProgressProgress { id: 0, offset })
+                    }
+                    AddProgressItem::Done(tag) => {
+                        DocImportProgress::IngestDone(DocImportProgressIngestDone {
+                            id: 0,
+                            hash: Arc::new(tag.hash().into()),
+                        })
+                    }
+                    _ => DocImportProgress::Progress(DocImportProgressProgress { id: 0, offset: 0 }),
+                }
             }
-            iroh_docs::rpc::client::docs::ImportProgress::Progress { id, offset } => {
-                DocImportProgress::Progress(DocImportProgressProgress { id, offset })
+            iroh_docs::api::ImportFileProgressItem::Done(outcome) => {
+                DocImportProgress::AllDone(DocImportProgressAllDone { key: outcome.key.into() })
             }
-            iroh_docs::rpc::client::docs::ImportProgress::IngestDone { id, hash } => {
-                DocImportProgress::IngestDone(DocImportProgressIngestDone {
-                    id,
-                    hash: Arc::new(hash.into()),
-                })
-            }
-            iroh_docs::rpc::client::docs::ImportProgress::AllDone { key } => {
-                DocImportProgress::AllDone(DocImportProgressAllDone { key: key.into() })
-            }
-            iroh_docs::rpc::client::docs::ImportProgress::Abort(err) => {
+            iroh_docs::api::ImportFileProgressItem::Error(err) => {
                 DocImportProgress::Abort(DocImportProgressAbort {
                     error: err.to_string(),
                 })
@@ -1474,33 +1491,25 @@ pub enum DocExportProgress {
     Abort(DocExportProgressAbort),
 }
 
-impl From<iroh_blobs::export::ExportProgress> for DocExportProgress {
-    fn from(value: iroh_blobs::export::ExportProgress) -> Self {
+impl From<iroh_blobs::api::blobs::ExportProgressItem> for DocExportProgress {
+    fn from(value: iroh_blobs::api::blobs::ExportProgressItem) -> Self {
         match value {
-            iroh_blobs::export::ExportProgress::Found {
-                id,
-                hash,
-                size,
-                outpath,
-                // TODO (b5) - currently ignoring meta field. meta is probably the key of the entry that's being exported
-                ..
-            } => DocExportProgress::Found(DocExportProgressFound {
-                id,
-                hash: Arc::new(hash.into()),
-                // TODO(b5) - this is ignoring verification status of file size!
-                size: size.value(),
-                outpath: outpath.to_string_lossy().to_string(),
-            }),
-            iroh_blobs::export::ExportProgress::Progress { id, offset } => {
-                DocExportProgress::Progress(DocExportProgressProgress { id, offset })
+            iroh_blobs::api::blobs::ExportProgressItem::Size(size) => {
+                // The new API doesn't have Found with id/hash/outpath - we use size info
+                DocExportProgress::Found(DocExportProgressFound {
+                    id: 0, // No longer provided
+                    hash: Arc::new(Hash(iroh_blobs::Hash::EMPTY)), // Placeholder
+                    size,
+                    outpath: String::new(), // Not provided in new API
+                })
             }
-            iroh_blobs::export::ExportProgress::Done { id } => {
-                DocExportProgress::Done(DocExportProgressDone { id })
+            iroh_blobs::api::blobs::ExportProgressItem::CopyProgress(offset) => {
+                DocExportProgress::Progress(DocExportProgressProgress { id: 0, offset })
             }
-            iroh_blobs::export::ExportProgress::AllDone => DocExportProgress::AllDone,
-            iroh_blobs::export::ExportProgress::Abort(err) => {
+            iroh_blobs::api::blobs::ExportProgressItem::Done => DocExportProgress::AllDone,
+            iroh_blobs::api::blobs::ExportProgressItem::Error(err) => {
                 DocExportProgress::Abort(DocExportProgressAbort {
-                    error: err.to_string(),
+                    error: format!("{err}"),
                 })
             }
         }
@@ -1565,7 +1574,7 @@ mod tests {
         )
         .await
         .unwrap();
-        let node_id = node.net().node_id().await.unwrap();
+        let node_id = node.net().node_id();
         println!("id: {}", node_id);
         let doc = node.docs().create().await.unwrap();
         let doc_id = doc.id();

@@ -727,12 +727,12 @@ uint64_t uniffi_iroh_ffi_fn_method_blobs_add_bytes_named(void*_Nonnull ptr, Rust
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_BLOBS_ADD_FROM_PATH
 #define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_BLOBS_ADD_FROM_PATH
-uint64_t uniffi_iroh_ffi_fn_method_blobs_add_from_path(void*_Nonnull ptr, RustBuffer path, int8_t in_place, void*_Nonnull tag, void*_Nonnull wrap, void*_Nonnull cb
+uint64_t uniffi_iroh_ffi_fn_method_blobs_add_from_path(void*_Nonnull ptr, RustBuffer path, int8_t in_place, void*_Nonnull _tag, void*_Nonnull _wrap, void*_Nonnull cb
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_BLOBS_CREATE_COLLECTION
 #define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_BLOBS_CREATE_COLLECTION
-uint64_t uniffi_iroh_ffi_fn_method_blobs_create_collection(void*_Nonnull ptr, void*_Nonnull collection, void*_Nonnull tag, RustBuffer tags_to_delete
+uint64_t uniffi_iroh_ffi_fn_method_blobs_create_collection(void*_Nonnull ptr, void*_Nonnull collection, void*_Nonnull _tag, RustBuffer _tags_to_delete
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_BLOBS_DELETE_BLOB
@@ -747,7 +747,7 @@ uint64_t uniffi_iroh_ffi_fn_method_blobs_download(void*_Nonnull ptr, void*_Nonnu
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_BLOBS_EXPORT
 #define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_BLOBS_EXPORT
-uint64_t uniffi_iroh_ffi_fn_method_blobs_export(void*_Nonnull ptr, void*_Nonnull hash, RustBuffer destination, RustBuffer format, RustBuffer mode
+uint64_t uniffi_iroh_ffi_fn_method_blobs_export(void*_Nonnull ptr, void*_Nonnull hash, RustBuffer destination, RustBuffer _format, RustBuffer _mode
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_BLOBS_GET_COLLECTION
@@ -787,7 +787,7 @@ uint64_t uniffi_iroh_ffi_fn_method_blobs_read_to_bytes(void*_Nonnull ptr, void*_
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_BLOBS_SHARE
 #define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_BLOBS_SHARE
-uint64_t uniffi_iroh_ffi_fn_method_blobs_share(void*_Nonnull ptr, void*_Nonnull hash, RustBuffer blob_format, RustBuffer ticket_options
+uint64_t uniffi_iroh_ffi_fn_method_blobs_share(void*_Nonnull ptr, void*_Nonnull hash, RustBuffer blob_format, RustBuffer _ticket_options
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_BLOBS_SIZE
@@ -1714,11 +1714,6 @@ void uniffi_iroh_ffi_fn_free_message(void*_Nonnull ptr, RustCallStatus *_Nonnull
 RustBuffer uniffi_iroh_ffi_fn_method_message_as_error(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_MESSAGE_AS_JOINED
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_MESSAGE_AS_JOINED
-RustBuffer uniffi_iroh_ffi_fn_method_message_as_joined(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_MESSAGE_AS_NEIGHBOR_DOWN
 #define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_MESSAGE_AS_NEIGHBOR_DOWN
 RustBuffer uniffi_iroh_ffi_fn_method_message_as_neighbor_down(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
@@ -1751,32 +1746,27 @@ void uniffi_iroh_ffi_fn_free_net(void*_Nonnull ptr, RustCallStatus *_Nonnull out
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_ADD_NODE_ADDR
 #define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_ADD_NODE_ADDR
-uint64_t uniffi_iroh_ffi_fn_method_net_add_node_addr(void*_Nonnull ptr, void*_Nonnull addr
+void uniffi_iroh_ffi_fn_method_net_add_node_addr(void*_Nonnull ptr, void*_Nonnull node_addr, RustCallStatus *_Nonnull out_status
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_HOME_RELAY
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_HOME_RELAY
-uint64_t uniffi_iroh_ffi_fn_method_net_home_relay(void*_Nonnull ptr
+#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_LATENCY
+#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_LATENCY
+RustBuffer uniffi_iroh_ffi_fn_method_net_latency(void*_Nonnull ptr, void*_Nonnull node_id, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_NODE_ADDR
 #define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_NODE_ADDR
-uint64_t uniffi_iroh_ffi_fn_method_net_node_addr(void*_Nonnull ptr
+void*_Nonnull uniffi_iroh_ffi_fn_method_net_node_addr(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_NODE_ID
 #define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_NODE_ID
-uint64_t uniffi_iroh_ffi_fn_method_net_node_id(void*_Nonnull ptr
+RustBuffer uniffi_iroh_ffi_fn_method_net_node_id(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_REMOTE_INFO
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_REMOTE_INFO
-uint64_t uniffi_iroh_ffi_fn_method_net_remote_info(void*_Nonnull ptr, void*_Nonnull node_id
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_REMOTE_INFO_LIST
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_REMOTE_INFO_LIST
-uint64_t uniffi_iroh_ffi_fn_method_net_remote_info_list(void*_Nonnull ptr
+#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_WAIT_ONLINE
+#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_WAIT_ONLINE
+uint64_t uniffi_iroh_ffi_fn_method_net_wait_online(void*_Nonnull ptr
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_CLONE_NODE
@@ -1797,16 +1787,6 @@ void*_Nonnull uniffi_iroh_ffi_fn_method_node_endpoint(void*_Nonnull ptr, RustCal
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NODE_SHUTDOWN
 #define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NODE_SHUTDOWN
 uint64_t uniffi_iroh_ffi_fn_method_node_shutdown(void*_Nonnull ptr
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NODE_STATS
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NODE_STATS
-uint64_t uniffi_iroh_ffi_fn_method_node_stats(void*_Nonnull ptr
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NODE_STATUS
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NODE_STATUS
-uint64_t uniffi_iroh_ffi_fn_method_node_status(void*_Nonnull ptr
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_CLONE_NODEADDR
@@ -1837,66 +1817,6 @@ int8_t uniffi_iroh_ffi_fn_method_nodeaddr_equal(void*_Nonnull ptr, void*_Nonnull
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NODEADDR_RELAY_URL
 #define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NODEADDR_RELAY_URL
 RustBuffer uniffi_iroh_ffi_fn_method_nodeaddr_relay_url(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_CLONE_NODESTATUS
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_CLONE_NODESTATUS
-void*_Nonnull uniffi_iroh_ffi_fn_clone_nodestatus(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_FREE_NODESTATUS
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_FREE_NODESTATUS
-void uniffi_iroh_ffi_fn_free_nodestatus(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NODESTATUS_LISTEN_ADDRS
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NODESTATUS_LISTEN_ADDRS
-RustBuffer uniffi_iroh_ffi_fn_method_nodestatus_listen_addrs(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NODESTATUS_NODE_ADDR
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NODESTATUS_NODE_ADDR
-void*_Nonnull uniffi_iroh_ffi_fn_method_nodestatus_node_addr(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NODESTATUS_RPC_ADDR
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NODESTATUS_RPC_ADDR
-RustBuffer uniffi_iroh_ffi_fn_method_nodestatus_rpc_addr(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NODESTATUS_VERSION
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NODESTATUS_VERSION
-RustBuffer uniffi_iroh_ffi_fn_method_nodestatus_version(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_CLONE_NODETICKET
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_CLONE_NODETICKET
-void*_Nonnull uniffi_iroh_ffi_fn_clone_nodeticket(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_FREE_NODETICKET
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_FREE_NODETICKET
-void uniffi_iroh_ffi_fn_free_nodeticket(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_CONSTRUCTOR_NODETICKET_NEW
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_CONSTRUCTOR_NODETICKET_NEW
-void*_Nonnull uniffi_iroh_ffi_fn_constructor_nodeticket_new(void*_Nonnull addr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_CONSTRUCTOR_NODETICKET_PARSE
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_CONSTRUCTOR_NODETICKET_PARSE
-void*_Nonnull uniffi_iroh_ffi_fn_constructor_nodeticket_parse(RustBuffer str, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NODETICKET_NODE_ADDR
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NODETICKET_NODE_ADDR
-void*_Nonnull uniffi_iroh_ffi_fn_method_nodeticket_node_addr(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NODETICKET_UNIFFI_TRAIT_DISPLAY
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NODETICKET_UNIFFI_TRAIT_DISPLAY
-RustBuffer uniffi_iroh_ffi_fn_method_nodeticket_uniffi_trait_display(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_CLONE_PROTOCOLCREATOR
@@ -3565,12 +3485,6 @@ uint16_t uniffi_iroh_ffi_checksum_method_message_as_error(void
     
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_MESSAGE_AS_JOINED
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_MESSAGE_AS_JOINED
-uint16_t uniffi_iroh_ffi_checksum_method_message_as_joined(void
-    
-);
-#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_MESSAGE_AS_NEIGHBOR_DOWN
 #define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_MESSAGE_AS_NEIGHBOR_DOWN
 uint16_t uniffi_iroh_ffi_checksum_method_message_as_neighbor_down(void
@@ -3601,9 +3515,9 @@ uint16_t uniffi_iroh_ffi_checksum_method_net_add_node_addr(void
     
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NET_HOME_RELAY
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NET_HOME_RELAY
-uint16_t uniffi_iroh_ffi_checksum_method_net_home_relay(void
+#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NET_LATENCY
+#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NET_LATENCY
+uint16_t uniffi_iroh_ffi_checksum_method_net_latency(void
     
 );
 #endif
@@ -3619,15 +3533,9 @@ uint16_t uniffi_iroh_ffi_checksum_method_net_node_id(void
     
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NET_REMOTE_INFO
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NET_REMOTE_INFO
-uint16_t uniffi_iroh_ffi_checksum_method_net_remote_info(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NET_REMOTE_INFO_LIST
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NET_REMOTE_INFO_LIST
-uint16_t uniffi_iroh_ffi_checksum_method_net_remote_info_list(void
+#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NET_WAIT_ONLINE
+#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NET_WAIT_ONLINE
+uint16_t uniffi_iroh_ffi_checksum_method_net_wait_online(void
     
 );
 #endif
@@ -3640,18 +3548,6 @@ uint16_t uniffi_iroh_ffi_checksum_method_node_endpoint(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NODE_SHUTDOWN
 #define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NODE_SHUTDOWN
 uint16_t uniffi_iroh_ffi_checksum_method_node_shutdown(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NODE_STATS
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NODE_STATS
-uint16_t uniffi_iroh_ffi_checksum_method_node_stats(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NODE_STATUS
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NODE_STATUS
-uint16_t uniffi_iroh_ffi_checksum_method_node_status(void
     
 );
 #endif
@@ -3670,36 +3566,6 @@ uint16_t uniffi_iroh_ffi_checksum_method_nodeaddr_equal(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NODEADDR_RELAY_URL
 #define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NODEADDR_RELAY_URL
 uint16_t uniffi_iroh_ffi_checksum_method_nodeaddr_relay_url(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NODESTATUS_LISTEN_ADDRS
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NODESTATUS_LISTEN_ADDRS
-uint16_t uniffi_iroh_ffi_checksum_method_nodestatus_listen_addrs(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NODESTATUS_NODE_ADDR
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NODESTATUS_NODE_ADDR
-uint16_t uniffi_iroh_ffi_checksum_method_nodestatus_node_addr(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NODESTATUS_RPC_ADDR
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NODESTATUS_RPC_ADDR
-uint16_t uniffi_iroh_ffi_checksum_method_nodestatus_rpc_addr(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NODESTATUS_VERSION
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NODESTATUS_VERSION
-uint16_t uniffi_iroh_ffi_checksum_method_nodestatus_version(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NODETICKET_NODE_ADDR
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NODETICKET_NODE_ADDR
-uint16_t uniffi_iroh_ffi_checksum_method_nodeticket_node_addr(void
     
 );
 #endif
@@ -4000,18 +3866,6 @@ uint16_t uniffi_iroh_ffi_checksum_constructor_iroh_persistent_with_options(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_CONSTRUCTOR_NODEADDR_NEW
 #define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_CONSTRUCTOR_NODEADDR_NEW
 uint16_t uniffi_iroh_ffi_checksum_constructor_nodeaddr_new(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_CONSTRUCTOR_NODETICKET_NEW
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_CONSTRUCTOR_NODETICKET_NEW
-uint16_t uniffi_iroh_ffi_checksum_constructor_nodeticket_new(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_CONSTRUCTOR_NODETICKET_PARSE
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_CONSTRUCTOR_NODETICKET_PARSE
-uint16_t uniffi_iroh_ffi_checksum_constructor_nodeticket_parse(void
     
 );
 #endif

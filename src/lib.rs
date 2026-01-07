@@ -70,17 +70,40 @@ pub fn set_log_level(level: LogLevel) {
 ///
 /// If `prefix` exists, it will be stripped before converting back to a path
 /// If `root` exists, will add the root as a parent to the created path
-/// Removes any null byte that has been appened to the key
+/// Removes any null byte that has been appended to the key
 #[uniffi::export]
 pub fn key_to_path(
     key: Vec<u8>,
     prefix: Option<String>,
     root: Option<String>,
 ) -> Result<String, IrohError> {
-    let path = iroh_blobs::util::fs::key_to_path(key, prefix, root.map(std::path::PathBuf::from))?;
-    let path = path.to_str();
-    let path = path.ok_or_else(|| anyhow::anyhow!("Unable to parse path {:?}", path))?;
-    let path = path.to_string();
+    // Remove trailing null byte if present
+    let key = if key.last() == Some(&0) {
+        &key[..key.len() - 1]
+    } else {
+        &key
+    };
+
+    let key_str = std::str::from_utf8(key)
+        .map_err(|e| anyhow::anyhow!("Invalid UTF-8 in key: {}", e))?;
+
+    // Strip prefix if present
+    let path_str = if let Some(ref prefix) = prefix {
+        key_str.strip_prefix(prefix.as_str()).unwrap_or(key_str)
+    } else {
+        key_str
+    };
+
+    // Add root as parent if present
+    let path = if let Some(ref root) = root {
+        std::path::PathBuf::from(root).join(path_str.trim_start_matches('/'))
+    } else {
+        std::path::PathBuf::from(path_str)
+    };
+
+    let path = path.to_str()
+        .ok_or_else(|| anyhow::anyhow!("Unable to convert path to string"))?
+        .to_string();
     Ok(path)
 }
 
@@ -93,13 +116,29 @@ pub fn path_to_key(
     prefix: Option<String>,
     root: Option<String>,
 ) -> Result<Vec<u8>, IrohError> {
-    iroh_blobs::util::fs::path_to_key(
-        std::path::PathBuf::from(path),
-        prefix,
-        root.map(std::path::PathBuf::from),
-    )
-    .map(|k| k.to_vec())
-    .map_err(IrohError::from)
+    let path = std::path::PathBuf::from(&path);
+
+    // Strip root from path if present
+    let path_str = if let Some(ref root) = root {
+        let root_path = std::path::PathBuf::from(root);
+        path.strip_prefix(&root_path)
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|_| path.to_string_lossy().to_string())
+    } else {
+        path.to_string_lossy().to_string()
+    };
+
+    // Add prefix if present
+    let key_str = if let Some(ref prefix) = prefix {
+        format!("{}{}", prefix, path_str)
+    } else {
+        path_str
+    };
+
+    // Append null byte
+    let mut key = key_str.into_bytes();
+    key.push(0);
+    Ok(key)
 }
 
 #[cfg(test)]

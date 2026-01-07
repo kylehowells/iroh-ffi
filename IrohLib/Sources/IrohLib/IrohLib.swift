@@ -226,7 +226,7 @@ private enum UniffiInternalError: LocalizedError {
     case unexpectedStaleHandle
     case rustPanic(_ message: String)
 
-    public var errorDescription: String? {
+    var errorDescription: String? {
         switch self {
         case .bufferOverflow: return "Reading the requested value would read past the end of the buffer"
         case .incompleteData: return "The buffer still has data after lifting its containing value"
@@ -402,11 +402,11 @@ private struct FfiConverterUInt32: FfiConverterPrimitive {
     typealias FfiType = UInt32
     typealias SwiftType = UInt32
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt32 {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt32 {
         return try lift(readInt(&buf))
     }
 
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         writeInt(&buf, lower(value))
     }
 }
@@ -418,11 +418,11 @@ private struct FfiConverterInt32: FfiConverterPrimitive {
     typealias FfiType = Int32
     typealias SwiftType = Int32
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Int32 {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Int32 {
         return try lift(readInt(&buf))
     }
 
-    public static func write(_ value: Int32, into buf: inout [UInt8]) {
+    static func write(_ value: Int32, into buf: inout [UInt8]) {
         writeInt(&buf, lower(value))
     }
 }
@@ -434,11 +434,11 @@ private struct FfiConverterUInt64: FfiConverterPrimitive {
     typealias FfiType = UInt64
     typealias SwiftType = UInt64
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt64 {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt64 {
         return try lift(readInt(&buf))
     }
 
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         writeInt(&buf, lower(value))
     }
 }
@@ -450,19 +450,19 @@ private struct FfiConverterBool: FfiConverter {
     typealias FfiType = Int8
     typealias SwiftType = Bool
 
-    public static func lift(_ value: Int8) throws -> Bool {
+    static func lift(_ value: Int8) throws -> Bool {
         return value != 0
     }
 
-    public static func lower(_ value: Bool) -> Int8 {
+    static func lower(_ value: Bool) -> Int8 {
         return value ? 1 : 0
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Bool {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Bool {
         return try lift(readInt(&buf))
     }
 
-    public static func write(_ value: Bool, into buf: inout [UInt8]) {
+    static func write(_ value: Bool, into buf: inout [UInt8]) {
         writeInt(&buf, lower(value))
     }
 }
@@ -474,7 +474,7 @@ private struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
 
-    public static func lift(_ value: RustBuffer) throws -> String {
+    static func lift(_ value: RustBuffer) throws -> String {
         defer {
             value.deallocate()
         }
@@ -485,7 +485,7 @@ private struct FfiConverterString: FfiConverter {
         return String(bytes: bytes, encoding: String.Encoding.utf8)!
     }
 
-    public static func lower(_ value: String) -> RustBuffer {
+    static func lower(_ value: String) -> RustBuffer {
         return value.utf8CString.withUnsafeBufferPointer { ptr in
             // The swift string gives us int8_t, we want uint8_t.
             ptr.withMemoryRebound(to: UInt8.self) { ptr in
@@ -496,12 +496,12 @@ private struct FfiConverterString: FfiConverter {
         }
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> String {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> String {
         let len: Int32 = try readInt(&buf)
         return try String(bytes: readBytes(&buf, count: Int(len)), encoding: String.Encoding.utf8)!
     }
 
-    public static func write(_ value: String, into buf: inout [UInt8]) {
+    static func write(_ value: String, into buf: inout [UInt8]) {
         let len = Int32(value.utf8.count)
         writeInt(&buf, len)
         writeBytes(&buf, value.utf8)
@@ -514,12 +514,12 @@ private struct FfiConverterString: FfiConverter {
 private struct FfiConverterData: FfiConverterRustBuffer {
     typealias SwiftType = Data
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Data {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Data {
         let len: Int32 = try readInt(&buf)
         return try Data(readBytes(&buf, count: Int(len)))
     }
 
-    public static func write(_ value: Data, into buf: inout [UInt8]) {
+    static func write(_ value: Data, into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         writeBytes(&buf, value)
@@ -532,7 +532,7 @@ private struct FfiConverterData: FfiConverterRustBuffer {
 private struct FfiConverterTimestamp: FfiConverterRustBuffer {
     typealias SwiftType = Date
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Date {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Date {
         let seconds: Int64 = try readInt(&buf)
         let nanoseconds: UInt32 = try readInt(&buf)
         if seconds >= 0 {
@@ -544,7 +544,7 @@ private struct FfiConverterTimestamp: FfiConverterRustBuffer {
         }
     }
 
-    public static func write(_ value: Date, into buf: inout [UInt8]) {
+    static func write(_ value: Date, into buf: inout [UInt8]) {
         var delta = value.timeIntervalSince1970
         var sign: Int64 = 1
         if delta < 0 {
@@ -570,13 +570,13 @@ private struct FfiConverterTimestamp: FfiConverterRustBuffer {
 private struct FfiConverterDuration: FfiConverterRustBuffer {
     typealias SwiftType = TimeInterval
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TimeInterval {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TimeInterval {
         let seconds: UInt64 = try readInt(&buf)
         let nanoseconds: UInt32 = try readInt(&buf)
         return Double(seconds) + (Double(nanoseconds) / 1.0e9)
     }
 
-    public static func write(_ value: TimeInterval, into buf: inout [UInt8]) {
+    static func write(_ value: TimeInterval, into buf: inout [UInt8]) {
         if value.rounded(.down) > Double(Int64.max) {
             fatalError("Duration overflow, exceeds max bounds supported by Uniffi")
         }
@@ -1695,12 +1695,12 @@ public func FfiConverterTypeBiStream_lower(_ value: BiStream) -> UnsafeMutableRa
 }
 
 /**
- * Options to download  data specified by the hash.
+ * Options to download data specified by the hash.
  */
 public protocol BlobDownloadOptionsProtocol: AnyObject {}
 
 /**
- * Options to download  data specified by the hash.
+ * Options to download data specified by the hash.
  */
 open class BlobDownloadOptions:
     BlobDownloadOptionsProtocol
@@ -2349,7 +2349,7 @@ public protocol BlobTicketProtocol: AnyObject {
     /**
      * Convert this ticket into input parameters for a call to blobs_download
      */
-    func asDownloadOptions() -> BlobDownloadOptions
+    func asDownloadOptions() throws -> BlobDownloadOptions
 
     /**
      * The [`BlobFormat`] for this ticket.
@@ -2438,8 +2438,8 @@ open class BlobTicket:
     /**
      * Convert this ticket into input parameters for a call to blobs_download
      */
-    open func asDownloadOptions() -> BlobDownloadOptions {
-        return try! FfiConverterTypeBlobDownloadOptions.lift(try! rustCall {
+    open func asDownloadOptions() throws -> BlobDownloadOptions {
+        return try FfiConverterTypeBlobDownloadOptions.lift(rustCallWithError(FfiConverterTypeIrohError__as_error.lift) {
             uniffi_iroh_ffi_fn_method_blobticket_as_download_options(self.uniffiClonePointer(), $0)
         })
     }
@@ -2614,8 +2614,7 @@ public protocol BlobsProtocol: AnyObject {
     /**
      * List all collections.
      *
-     * Note: this allocates for each `BlobListCollectionsResponse`, if you have many `BlobListCollectionsResponse`s this may be a prohibitively large list.
-     * Please file an [issue](https://github.com/n0-computer/iroh-ffi/issues/new) if you run into this issue
+     * Note: Collections API has changed significantly - this is a stub
      */
     func listCollections() async throws -> [CollectionInfo]
 
@@ -2944,8 +2943,7 @@ open class Blobs:
     /**
      * List all collections.
      *
-     * Note: this allocates for each `BlobListCollectionsResponse`, if you have many `BlobListCollectionsResponse`s this may be a prohibitively large list.
-     * Please file an [issue](https://github.com/n0-computer/iroh-ffi/issues/new) if you run into this issue
+     * Note: Collections API has changed significantly - this is a stub
      */
     open func listCollections() async throws -> [CollectionInfo] {
         return
@@ -3504,7 +3502,7 @@ public protocol ConnectionProtocol: AnyObject {
 
     func acceptUni() async throws -> RecvStream
 
-    func alpn() -> Data?
+    func alpn() -> Data
 
     func close(errorCode: UInt64, reason: Data) throws
 
@@ -3522,7 +3520,7 @@ public protocol ConnectionProtocol: AnyObject {
 
     func readDatagram() async throws -> Data
 
-    func remoteNodeId() throws -> String
+    func remoteNodeId() -> String
 
     func rtt() -> UInt64
 
@@ -3618,8 +3616,8 @@ open class Connection:
             )
     }
 
-    open func alpn() -> Data? {
-        return try! FfiConverterOptionData.lift(try! rustCall {
+    open func alpn() -> Data {
+        return try! FfiConverterData.lift(try! rustCall {
             uniffi_iroh_ffi_fn_method_connection_alpn(self.uniffiClonePointer(), $0)
         })
     }
@@ -3713,8 +3711,8 @@ open class Connection:
             )
     }
 
-    open func remoteNodeId() throws -> String {
-        return try FfiConverterString.lift(rustCallWithError(FfiConverterTypeIrohError__as_error.lift) {
+    open func remoteNodeId() -> String {
+        return try! FfiConverterString.lift(try! rustCall {
             uniffi_iroh_ffi_fn_method_connection_remote_node_id(self.uniffiClonePointer(), $0)
         })
     }
@@ -6363,7 +6361,7 @@ public protocol EndpointProtocol: AnyObject {
     func connect(nodeAddr: NodeAddr, alpn: Data) async throws -> Connection
 
     /**
-     * The string representation of this endpoint's NodeId.
+     * The string representation of this endpoint's EndpointId.
      */
     func nodeId() throws -> String
 }
@@ -6435,7 +6433,7 @@ open class Endpoint:
     }
 
     /**
-     * The string representation of this endpoint's NodeId.
+     * The string representation of this endpoint's EndpointId.
      */
     open func nodeId() throws -> String {
         return try FfiConverterString.lift(rustCallWithError(FfiConverterTypeIrohError__as_error.lift) {
@@ -7331,37 +7329,37 @@ public func FfiConverterTypeHash_lower(_ value: Hash) -> UnsafeMutableRawPointer
  */
 public protocol IrohProtocol: AnyObject {
     /**
-     * Access to gossip specific funtionaliy.
+     * Access to authors functionality.
      */
     func authors() -> Authors
 
     /**
-     * Access to blob specific funtionaliy.
+     * Access to blob specific functionality.
      */
     func blobs() -> Blobs
 
     /**
-     * Access to docs specific funtionaliy.
+     * Access to docs specific functionality.
      */
     func docs() -> Docs
 
     /**
-     * Access to gossip specific funtionaliy.
+     * Access to gossip specific functionality.
      */
     func gossip() -> Gossip
 
     /**
-     * Access to blob specific funtionaliy.
+     * Access to network specific functionality.
      */
     func net() -> Net
 
     /**
-     * Access to node specific funtionaliy.
+     * Access to node specific functionality.
      */
     func node() -> Node
 
     /**
-     * Access to tags specific funtionaliy.
+     * Access to tags specific functionality.
      */
     func tags() -> Tags
 }
@@ -7495,7 +7493,7 @@ open class Iroh:
     }
 
     /**
-     * Access to gossip specific funtionaliy.
+     * Access to authors functionality.
      */
     open func authors() -> Authors {
         return try! FfiConverterTypeAuthors.lift(try! rustCall {
@@ -7504,7 +7502,7 @@ open class Iroh:
     }
 
     /**
-     * Access to blob specific funtionaliy.
+     * Access to blob specific functionality.
      */
     open func blobs() -> Blobs {
         return try! FfiConverterTypeBlobs.lift(try! rustCall {
@@ -7513,7 +7511,7 @@ open class Iroh:
     }
 
     /**
-     * Access to docs specific funtionaliy.
+     * Access to docs specific functionality.
      */
     open func docs() -> Docs {
         return try! FfiConverterTypeDocs.lift(try! rustCall {
@@ -7522,7 +7520,7 @@ open class Iroh:
     }
 
     /**
-     * Access to gossip specific funtionaliy.
+     * Access to gossip specific functionality.
      */
     open func gossip() -> Gossip {
         return try! FfiConverterTypeGossip.lift(try! rustCall {
@@ -7531,7 +7529,7 @@ open class Iroh:
     }
 
     /**
-     * Access to blob specific funtionaliy.
+     * Access to network specific functionality.
      */
     open func net() -> Net {
         return try! FfiConverterTypeNet.lift(try! rustCall {
@@ -7540,7 +7538,7 @@ open class Iroh:
     }
 
     /**
-     * Access to node specific funtionaliy.
+     * Access to node specific functionality.
      */
     open func node() -> Node {
         return try! FfiConverterTypeNode.lift(try! rustCall {
@@ -7549,7 +7547,7 @@ open class Iroh:
     }
 
     /**
-     * Access to tags specific funtionaliy.
+     * Access to tags specific functionality.
      */
     open func tags() -> Tags {
         return try! FfiConverterTypeTags.lift(try! rustCall {
@@ -7966,8 +7964,6 @@ public func FfiConverterTypeLiveEvent_lower(_ value: LiveEvent) -> UnsafeMutable
 public protocol MessageProtocol: AnyObject {
     func asError() -> String
 
-    func asJoined() -> [String]
-
     func asNeighborDown() -> String
 
     func asNeighborUp() -> String
@@ -8032,12 +8028,6 @@ open class Message:
     open func asError() -> String {
         return try! FfiConverterString.lift(try! rustCall {
             uniffi_iroh_ffi_fn_method_message_as_error(self.uniffiClonePointer(), $0)
-        })
-    }
-
-    open func asJoined() -> [String] {
-        return try! FfiConverterSequenceString.lift(try! rustCall {
-            uniffi_iroh_ffi_fn_method_message_as_joined(self.uniffiClonePointer(), $0)
         })
     }
 
@@ -8118,34 +8108,34 @@ public func FfiConverterTypeMessage_lower(_ value: Message) -> UnsafeMutableRawP
  */
 public protocol NetProtocol: AnyObject {
     /**
-     * Add a known node address to the node.
+     * Add endpoint addressing information for out-of-band peer discovery.
+     *
+     * This is used to inform the node about peer addresses obtained through
+     * some out-of-band mechanism (e.g., exchanged via gossip topic subscription,
+     * QR codes, tickets, etc.). The StaticProvider will use this information
+     * to help establish connections to the given peer.
      */
-    func addNodeAddr(addr: NodeAddr) async throws
+    func addNodeAddr(nodeAddr: NodeAddr) throws
 
     /**
-     * Get the relay server we are connected to.
+     * Get the latency to a specific node, if we have connection info for it.
      */
-    func homeRelay() async throws -> String?
+    func latency(nodeId: PublicKey) -> TimeInterval?
 
     /**
      * Return the [`NodeAddr`] for this node.
      */
-    func nodeAddr() async throws -> NodeAddr
+    func nodeAddr() -> NodeAddr
 
     /**
      * The string representation of the PublicKey of this node.
      */
-    func nodeId() async throws -> String
+    func nodeId() -> String
 
     /**
-     * Return connection information on the currently running node.
+     * Wait for the endpoint to be online (connected to relay and has direct addresses).
      */
-    func remoteInfo(nodeId: PublicKey) async throws -> RemoteInfo?
-
-    /**
-     * Return `ConnectionInfo`s for each connection we have to another iroh node.
-     */
-    func remoteInfoList() async throws -> [RemoteInfo]
+    func waitOnline() async throws
 }
 
 /**
@@ -8201,117 +8191,62 @@ open class Net:
     }
 
     /**
-     * Add a known node address to the node.
+     * Add endpoint addressing information for out-of-band peer discovery.
+     *
+     * This is used to inform the node about peer addresses obtained through
+     * some out-of-band mechanism (e.g., exchanged via gossip topic subscription,
+     * QR codes, tickets, etc.). The StaticProvider will use this information
+     * to help establish connections to the given peer.
      */
-    open func addNodeAddr(addr: NodeAddr) async throws {
+    open func addNodeAddr(nodeAddr: NodeAddr) throws { try rustCallWithError(FfiConverterTypeIrohError__as_error.lift) {
+        uniffi_iroh_ffi_fn_method_net_add_node_addr(self.uniffiClonePointer(),
+                                                    FfiConverterTypeNodeAddr.lower(nodeAddr), $0)
+    }
+    }
+
+    /**
+     * Get the latency to a specific node, if we have connection info for it.
+     */
+    open func latency(nodeId: PublicKey) -> TimeInterval? {
+        return try! FfiConverterOptionDuration.lift(try! rustCall {
+            uniffi_iroh_ffi_fn_method_net_latency(self.uniffiClonePointer(),
+                                                  FfiConverterTypePublicKey.lower(nodeId), $0)
+        })
+    }
+
+    /**
+     * Return the [`NodeAddr`] for this node.
+     */
+    open func nodeAddr() -> NodeAddr {
+        return try! FfiConverterTypeNodeAddr.lift(try! rustCall {
+            uniffi_iroh_ffi_fn_method_net_node_addr(self.uniffiClonePointer(), $0)
+        })
+    }
+
+    /**
+     * The string representation of the PublicKey of this node.
+     */
+    open func nodeId() -> String {
+        return try! FfiConverterString.lift(try! rustCall {
+            uniffi_iroh_ffi_fn_method_net_node_id(self.uniffiClonePointer(), $0)
+        })
+    }
+
+    /**
+     * Wait for the endpoint to be online (connected to relay and has direct addresses).
+     */
+    open func waitOnline() async throws {
         return
             try await uniffiRustCallAsync(
                 rustFutureFunc: {
-                    uniffi_iroh_ffi_fn_method_net_add_node_addr(
-                        self.uniffiClonePointer(),
-                        FfiConverterTypeNodeAddr.lower(addr)
+                    uniffi_iroh_ffi_fn_method_net_wait_online(
+                        self.uniffiClonePointer()
                     )
                 },
                 pollFunc: ffi_iroh_ffi_rust_future_poll_void,
                 completeFunc: ffi_iroh_ffi_rust_future_complete_void,
                 freeFunc: ffi_iroh_ffi_rust_future_free_void,
                 liftFunc: { $0 },
-                errorHandler: FfiConverterTypeIrohError__as_error.lift
-            )
-    }
-
-    /**
-     * Get the relay server we are connected to.
-     */
-    open func homeRelay() async throws -> String? {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_iroh_ffi_fn_method_net_home_relay(
-                        self.uniffiClonePointer()
-                    )
-                },
-                pollFunc: ffi_iroh_ffi_rust_future_poll_rust_buffer,
-                completeFunc: ffi_iroh_ffi_rust_future_complete_rust_buffer,
-                freeFunc: ffi_iroh_ffi_rust_future_free_rust_buffer,
-                liftFunc: FfiConverterOptionString.lift,
-                errorHandler: FfiConverterTypeIrohError__as_error.lift
-            )
-    }
-
-    /**
-     * Return the [`NodeAddr`] for this node.
-     */
-    open func nodeAddr() async throws -> NodeAddr {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_iroh_ffi_fn_method_net_node_addr(
-                        self.uniffiClonePointer()
-                    )
-                },
-                pollFunc: ffi_iroh_ffi_rust_future_poll_pointer,
-                completeFunc: ffi_iroh_ffi_rust_future_complete_pointer,
-                freeFunc: ffi_iroh_ffi_rust_future_free_pointer,
-                liftFunc: FfiConverterTypeNodeAddr.lift,
-                errorHandler: FfiConverterTypeIrohError__as_error.lift
-            )
-    }
-
-    /**
-     * The string representation of the PublicKey of this node.
-     */
-    open func nodeId() async throws -> String {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_iroh_ffi_fn_method_net_node_id(
-                        self.uniffiClonePointer()
-                    )
-                },
-                pollFunc: ffi_iroh_ffi_rust_future_poll_rust_buffer,
-                completeFunc: ffi_iroh_ffi_rust_future_complete_rust_buffer,
-                freeFunc: ffi_iroh_ffi_rust_future_free_rust_buffer,
-                liftFunc: FfiConverterString.lift,
-                errorHandler: FfiConverterTypeIrohError__as_error.lift
-            )
-    }
-
-    /**
-     * Return connection information on the currently running node.
-     */
-    open func remoteInfo(nodeId: PublicKey) async throws -> RemoteInfo? {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_iroh_ffi_fn_method_net_remote_info(
-                        self.uniffiClonePointer(),
-                        FfiConverterTypePublicKey.lower(nodeId)
-                    )
-                },
-                pollFunc: ffi_iroh_ffi_rust_future_poll_rust_buffer,
-                completeFunc: ffi_iroh_ffi_rust_future_complete_rust_buffer,
-                freeFunc: ffi_iroh_ffi_rust_future_free_rust_buffer,
-                liftFunc: FfiConverterOptionTypeRemoteInfo.lift,
-                errorHandler: FfiConverterTypeIrohError__as_error.lift
-            )
-    }
-
-    /**
-     * Return `ConnectionInfo`s for each connection we have to another iroh node.
-     */
-    open func remoteInfoList() async throws -> [RemoteInfo] {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_iroh_ffi_fn_method_net_remote_info_list(
-                        self.uniffiClonePointer()
-                    )
-                },
-                pollFunc: ffi_iroh_ffi_rust_future_poll_rust_buffer,
-                completeFunc: ffi_iroh_ffi_rust_future_complete_rust_buffer,
-                freeFunc: ffi_iroh_ffi_rust_future_free_rust_buffer,
-                liftFunc: FfiConverterSequenceTypeRemoteInfo.lift,
                 errorHandler: FfiConverterTypeIrohError__as_error.lift
             )
     }
@@ -8374,16 +8309,6 @@ public protocol NodeProtocol: AnyObject {
      * Shutdown this iroh node.
      */
     func shutdown() async throws
-
-    /**
-     * Get statistics of the running node.
-     */
-    func stats() async throws -> [String: CounterStats]
-
-    /**
-     * Get status information about a node
-     */
-    func status() async throws -> NodeStatus
 }
 
 /**
@@ -8459,44 +8384,6 @@ open class Node:
                 completeFunc: ffi_iroh_ffi_rust_future_complete_void,
                 freeFunc: ffi_iroh_ffi_rust_future_free_void,
                 liftFunc: { $0 },
-                errorHandler: FfiConverterTypeIrohError__as_error.lift
-            )
-    }
-
-    /**
-     * Get statistics of the running node.
-     */
-    open func stats() async throws -> [String: CounterStats] {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_iroh_ffi_fn_method_node_stats(
-                        self.uniffiClonePointer()
-                    )
-                },
-                pollFunc: ffi_iroh_ffi_rust_future_poll_rust_buffer,
-                completeFunc: ffi_iroh_ffi_rust_future_complete_rust_buffer,
-                freeFunc: ffi_iroh_ffi_rust_future_free_rust_buffer,
-                liftFunc: FfiConverterDictionaryStringTypeCounterStats.lift,
-                errorHandler: FfiConverterTypeIrohError__as_error.lift
-            )
-    }
-
-    /**
-     * Get status information about a node
-     */
-    open func status() async throws -> NodeStatus {
-        return
-            try await uniffiRustCallAsync(
-                rustFutureFunc: {
-                    uniffi_iroh_ffi_fn_method_node_status(
-                        self.uniffiClonePointer()
-                    )
-                },
-                pollFunc: ffi_iroh_ffi_rust_future_poll_pointer,
-                completeFunc: ffi_iroh_ffi_rust_future_complete_pointer,
-                freeFunc: ffi_iroh_ffi_rust_future_free_pointer,
-                liftFunc: FfiConverterTypeNodeStatus.lift,
                 errorHandler: FfiConverterTypeIrohError__as_error.lift
             )
     }
@@ -8708,330 +8595,6 @@ public func FfiConverterTypeNodeAddr_lift(_ pointer: UnsafeMutableRawPointer) th
 #endif
 public func FfiConverterTypeNodeAddr_lower(_ value: NodeAddr) -> UnsafeMutableRawPointer {
     return FfiConverterTypeNodeAddr.lower(value)
-}
-
-/**
- * The response to a status request
- */
-public protocol NodeStatusProtocol: AnyObject {
-    /**
-     * The bound listening addresses of the node
-     */
-    func listenAddrs() -> [String]
-
-    /**
-     * The node id and socket addresses of this node.
-     */
-    func nodeAddr() -> NodeAddr
-
-    /**
-     * The address of the RPC of the node
-     */
-    func rpcAddr() -> String?
-
-    /**
-     * The version of the node
-     */
-    func version() -> String
-}
-
-/**
- * The response to a status request
- */
-open class NodeStatus:
-    NodeStatusProtocol
-{
-    fileprivate let pointer: UnsafeMutableRawPointer!
-
-    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
-    public struct NoPointer {
-        public init() {}
-    }
-
-    // TODO: We'd like this to be `private` but for Swifty reasons,
-    // we can't implement `FfiConverter` without making this `required` and we can't
-    // make it `required` without making it `public`.
-    public required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
-        self.pointer = pointer
-    }
-
-    // This constructor can be used to instantiate a fake object.
-    // - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
-    //
-    // - Warning:
-    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
-    public init(noPointer _: NoPointer) {
-        pointer = nil
-    }
-
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
-    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_iroh_ffi_fn_clone_nodestatus(self.pointer, $0) }
-    }
-
-    // No primary constructor declared for this class.
-
-    deinit {
-        guard let pointer = pointer else {
-            return
-        }
-
-        try! rustCall { uniffi_iroh_ffi_fn_free_nodestatus(pointer, $0) }
-    }
-
-    /**
-     * The bound listening addresses of the node
-     */
-    open func listenAddrs() -> [String] {
-        return try! FfiConverterSequenceString.lift(try! rustCall {
-            uniffi_iroh_ffi_fn_method_nodestatus_listen_addrs(self.uniffiClonePointer(), $0)
-        })
-    }
-
-    /**
-     * The node id and socket addresses of this node.
-     */
-    open func nodeAddr() -> NodeAddr {
-        return try! FfiConverterTypeNodeAddr.lift(try! rustCall {
-            uniffi_iroh_ffi_fn_method_nodestatus_node_addr(self.uniffiClonePointer(), $0)
-        })
-    }
-
-    /**
-     * The address of the RPC of the node
-     */
-    open func rpcAddr() -> String? {
-        return try! FfiConverterOptionString.lift(try! rustCall {
-            uniffi_iroh_ffi_fn_method_nodestatus_rpc_addr(self.uniffiClonePointer(), $0)
-        })
-    }
-
-    /**
-     * The version of the node
-     */
-    open func version() -> String {
-        return try! FfiConverterString.lift(try! rustCall {
-            uniffi_iroh_ffi_fn_method_nodestatus_version(self.uniffiClonePointer(), $0)
-        })
-    }
-}
-
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
-public struct FfiConverterTypeNodeStatus: FfiConverter {
-    typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = NodeStatus
-
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> NodeStatus {
-        return NodeStatus(unsafeFromRawPointer: pointer)
-    }
-
-    public static func lower(_ value: NodeStatus) -> UnsafeMutableRawPointer {
-        return value.uniffiClonePointer()
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> NodeStatus {
-        let v: UInt64 = try readInt(&buf)
-        // The Rust code won't compile if a pointer won't fit in a UInt64.
-        // We have to go via `UInt` because that's the thing that's the size of a pointer.
-        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if ptr == nil {
-            throw UniffiInternalError.unexpectedNullPointer
-        }
-        return try lift(ptr!)
-    }
-
-    public static func write(_ value: NodeStatus, into buf: inout [UInt8]) {
-        // This fiddling is because `Int` is the thing that's the same size as a pointer.
-        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
-        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
-    }
-}
-
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
-public func FfiConverterTypeNodeStatus_lift(_ pointer: UnsafeMutableRawPointer) throws -> NodeStatus {
-    return try FfiConverterTypeNodeStatus.lift(pointer)
-}
-
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
-public func FfiConverterTypeNodeStatus_lower(_ value: NodeStatus) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeNodeStatus.lower(value)
-}
-
-/**
- * A token containing information for establishing a connection to a node.
- *
- * This allows establishing a connection to the node in most circumstances where it is
- * possible to do so.
- *
- * It is a single item which can be easily serialized and deserialized.
- */
-public protocol NodeTicketProtocol: AnyObject {
-    /**
-     * The [`NodeAddr`] of the provider for this ticket.
-     */
-    func nodeAddr() -> NodeAddr
-}
-
-/**
- * A token containing information for establishing a connection to a node.
- *
- * This allows establishing a connection to the node in most circumstances where it is
- * possible to do so.
- *
- * It is a single item which can be easily serialized and deserialized.
- */
-open class NodeTicket:
-    CustomStringConvertible,
-    NodeTicketProtocol
-{
-    fileprivate let pointer: UnsafeMutableRawPointer!
-
-    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
-    public struct NoPointer {
-        public init() {}
-    }
-
-    // TODO: We'd like this to be `private` but for Swifty reasons,
-    // we can't implement `FfiConverter` without making this `required` and we can't
-    // make it `required` without making it `public`.
-    public required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
-        self.pointer = pointer
-    }
-
-    // This constructor can be used to instantiate a fake object.
-    // - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
-    //
-    // - Warning:
-    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
-    public init(noPointer _: NoPointer) {
-        pointer = nil
-    }
-
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
-    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_iroh_ffi_fn_clone_nodeticket(self.pointer, $0) }
-    }
-
-    /**
-     * Wrap the given [`NodeAddr`] as a [`NodeTicket`].
-     *
-     * The returned ticket can easily be deserialized using its string presentation, and
-     * later parsed again using [`Self::parse`].
-     */
-    public convenience init(addr: NodeAddr) throws {
-        let pointer =
-            try rustCallWithError(FfiConverterTypeIrohError__as_error.lift) {
-                uniffi_iroh_ffi_fn_constructor_nodeticket_new(
-                    FfiConverterTypeNodeAddr.lower(addr), $0
-                )
-            }
-        self.init(unsafeFromRawPointer: pointer)
-    }
-
-    deinit {
-        guard let pointer = pointer else {
-            return
-        }
-
-        try! rustCall { uniffi_iroh_ffi_fn_free_nodeticket(pointer, $0) }
-    }
-
-    /**
-     * Parse back a [`NodeTicket`] from its string presentation.
-     */
-    public static func parse(str: String) throws -> NodeTicket {
-        return try FfiConverterTypeNodeTicket.lift(rustCallWithError(FfiConverterTypeIrohError__as_error.lift) {
-            uniffi_iroh_ffi_fn_constructor_nodeticket_parse(
-                FfiConverterString.lower(str), $0
-            )
-        })
-    }
-
-    /**
-     * The [`NodeAddr`] of the provider for this ticket.
-     */
-    open func nodeAddr() -> NodeAddr {
-        return try! FfiConverterTypeNodeAddr.lift(try! rustCall {
-            uniffi_iroh_ffi_fn_method_nodeticket_node_addr(self.uniffiClonePointer(), $0)
-        })
-    }
-
-    open var description: String {
-        return try! FfiConverterString.lift(
-            try! rustCall {
-                uniffi_iroh_ffi_fn_method_nodeticket_uniffi_trait_display(self.uniffiClonePointer(), $0)
-            }
-        )
-    }
-}
-
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
-public struct FfiConverterTypeNodeTicket: FfiConverter {
-    typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = NodeTicket
-
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> NodeTicket {
-        return NodeTicket(unsafeFromRawPointer: pointer)
-    }
-
-    public static func lower(_ value: NodeTicket) -> UnsafeMutableRawPointer {
-        return value.uniffiClonePointer()
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> NodeTicket {
-        let v: UInt64 = try readInt(&buf)
-        // The Rust code won't compile if a pointer won't fit in a UInt64.
-        // We have to go via `UInt` because that's the thing that's the size of a pointer.
-        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if ptr == nil {
-            throw UniffiInternalError.unexpectedNullPointer
-        }
-        return try lift(ptr!)
-    }
-
-    public static func write(_ value: NodeTicket, into buf: inout [UInt8]) {
-        // This fiddling is because `Int` is the thing that's the same size as a pointer.
-        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
-        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
-    }
-}
-
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
-public func FfiConverterTypeNodeTicket_lift(_ pointer: UnsafeMutableRawPointer) throws -> NodeTicket {
-    return try FfiConverterTypeNodeTicket.lift(pointer)
-}
-
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
-public func FfiConverterTypeNodeTicket_lower(_ value: NodeTicket) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeNodeTicket.lower(value)
 }
 
 public protocol ProtocolCreator: AnyObject {
@@ -16354,7 +15917,6 @@ public enum MessageType {
     case neighborUp
     case neighborDown
     case received
-    case joined
     case lagged
     case error
 }
@@ -16374,11 +15936,9 @@ public struct FfiConverterTypeMessageType: FfiConverterRustBuffer {
 
         case 3: return .received
 
-        case 4: return .joined
+        case 4: return .lagged
 
-        case 5: return .lagged
-
-        case 6: return .error
+        case 5: return .error
 
         default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -16395,14 +15955,11 @@ public struct FfiConverterTypeMessageType: FfiConverterRustBuffer {
         case .received:
             writeInt(&buf, Int32(3))
 
-        case .joined:
+        case .lagged:
             writeInt(&buf, Int32(4))
 
-        case .lagged:
-            writeInt(&buf, Int32(5))
-
         case .error:
-            writeInt(&buf, Int32(6))
+            writeInt(&buf, Int32(5))
         }
     }
 }
@@ -16831,7 +16388,7 @@ extension SyncReason: Equatable, Hashable {}
 private struct FfiConverterOptionUInt64: FfiConverterRustBuffer {
     typealias SwiftType = UInt64?
 
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         guard let value = value else {
             writeInt(&buf, Int8(0))
             return
@@ -16840,7 +16397,7 @@ private struct FfiConverterOptionUInt64: FfiConverterRustBuffer {
         FfiConverterUInt64.write(value, into: &buf)
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterUInt64.read(from: &buf)
@@ -16855,7 +16412,7 @@ private struct FfiConverterOptionUInt64: FfiConverterRustBuffer {
 private struct FfiConverterOptionString: FfiConverterRustBuffer {
     typealias SwiftType = String?
 
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         guard let value = value else {
             writeInt(&buf, Int8(0))
             return
@@ -16864,7 +16421,7 @@ private struct FfiConverterOptionString: FfiConverterRustBuffer {
         FfiConverterString.write(value, into: &buf)
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterString.read(from: &buf)
@@ -16879,7 +16436,7 @@ private struct FfiConverterOptionString: FfiConverterRustBuffer {
 private struct FfiConverterOptionData: FfiConverterRustBuffer {
     typealias SwiftType = Data?
 
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         guard let value = value else {
             writeInt(&buf, Int8(0))
             return
@@ -16888,7 +16445,7 @@ private struct FfiConverterOptionData: FfiConverterRustBuffer {
         FfiConverterData.write(value, into: &buf)
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterData.read(from: &buf)
@@ -16903,7 +16460,7 @@ private struct FfiConverterOptionData: FfiConverterRustBuffer {
 private struct FfiConverterOptionDuration: FfiConverterRustBuffer {
     typealias SwiftType = TimeInterval?
 
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         guard let value = value else {
             writeInt(&buf, Int8(0))
             return
@@ -16912,7 +16469,7 @@ private struct FfiConverterOptionDuration: FfiConverterRustBuffer {
         FfiConverterDuration.write(value, into: &buf)
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterDuration.read(from: &buf)
@@ -16927,7 +16484,7 @@ private struct FfiConverterOptionDuration: FfiConverterRustBuffer {
 private struct FfiConverterOptionTypeBlobProvideEventCallback: FfiConverterRustBuffer {
     typealias SwiftType = BlobProvideEventCallback?
 
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         guard let value = value else {
             writeInt(&buf, Int8(0))
             return
@@ -16936,7 +16493,7 @@ private struct FfiConverterOptionTypeBlobProvideEventCallback: FfiConverterRustB
         FfiConverterTypeBlobProvideEventCallback.write(value, into: &buf)
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeBlobProvideEventCallback.read(from: &buf)
@@ -16951,7 +16508,7 @@ private struct FfiConverterOptionTypeBlobProvideEventCallback: FfiConverterRustB
 private struct FfiConverterOptionTypeDoc: FfiConverterRustBuffer {
     typealias SwiftType = Doc?
 
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         guard let value = value else {
             writeInt(&buf, Int8(0))
             return
@@ -16960,7 +16517,7 @@ private struct FfiConverterOptionTypeDoc: FfiConverterRustBuffer {
         FfiConverterTypeDoc.write(value, into: &buf)
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeDoc.read(from: &buf)
@@ -16975,7 +16532,7 @@ private struct FfiConverterOptionTypeDoc: FfiConverterRustBuffer {
 private struct FfiConverterOptionTypeDocExportFileCallback: FfiConverterRustBuffer {
     typealias SwiftType = DocExportFileCallback?
 
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         guard let value = value else {
             writeInt(&buf, Int8(0))
             return
@@ -16984,7 +16541,7 @@ private struct FfiConverterOptionTypeDocExportFileCallback: FfiConverterRustBuff
         FfiConverterTypeDocExportFileCallback.write(value, into: &buf)
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeDocExportFileCallback.read(from: &buf)
@@ -16999,7 +16556,7 @@ private struct FfiConverterOptionTypeDocExportFileCallback: FfiConverterRustBuff
 private struct FfiConverterOptionTypeDocImportFileCallback: FfiConverterRustBuffer {
     typealias SwiftType = DocImportFileCallback?
 
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         guard let value = value else {
             writeInt(&buf, Int8(0))
             return
@@ -17008,7 +16565,7 @@ private struct FfiConverterOptionTypeDocImportFileCallback: FfiConverterRustBuff
         FfiConverterTypeDocImportFileCallback.write(value, into: &buf)
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeDocImportFileCallback.read(from: &buf)
@@ -17023,7 +16580,7 @@ private struct FfiConverterOptionTypeDocImportFileCallback: FfiConverterRustBuff
 private struct FfiConverterOptionTypeEntry: FfiConverterRustBuffer {
     typealias SwiftType = Entry?
 
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         guard let value = value else {
             writeInt(&buf, Int8(0))
             return
@@ -17032,7 +16589,7 @@ private struct FfiConverterOptionTypeEntry: FfiConverterRustBuffer {
         FfiConverterTypeEntry.write(value, into: &buf)
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeEntry.read(from: &buf)
@@ -17047,7 +16604,7 @@ private struct FfiConverterOptionTypeEntry: FfiConverterRustBuffer {
 private struct FfiConverterOptionTypeLatencyAndControlMsg: FfiConverterRustBuffer {
     typealias SwiftType = LatencyAndControlMsg?
 
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         guard let value = value else {
             writeInt(&buf, Int8(0))
             return
@@ -17056,7 +16613,7 @@ private struct FfiConverterOptionTypeLatencyAndControlMsg: FfiConverterRustBuffe
         FfiConverterTypeLatencyAndControlMsg.write(value, into: &buf)
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeLatencyAndControlMsg.read(from: &buf)
@@ -17071,7 +16628,7 @@ private struct FfiConverterOptionTypeLatencyAndControlMsg: FfiConverterRustBuffe
 private struct FfiConverterOptionTypeQueryOptions: FfiConverterRustBuffer {
     typealias SwiftType = QueryOptions?
 
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         guard let value = value else {
             writeInt(&buf, Int8(0))
             return
@@ -17080,7 +16637,7 @@ private struct FfiConverterOptionTypeQueryOptions: FfiConverterRustBuffer {
         FfiConverterTypeQueryOptions.write(value, into: &buf)
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeQueryOptions.read(from: &buf)
@@ -17092,34 +16649,10 @@ private struct FfiConverterOptionTypeQueryOptions: FfiConverterRustBuffer {
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
-private struct FfiConverterOptionTypeRemoteInfo: FfiConverterRustBuffer {
-    typealias SwiftType = RemoteInfo?
-
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
-        guard let value = value else {
-            writeInt(&buf, Int8(0))
-            return
-        }
-        writeInt(&buf, Int8(1))
-        FfiConverterTypeRemoteInfo.write(value, into: &buf)
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
-        switch try readInt(&buf) as Int8 {
-        case 0: return nil
-        case 1: return try FfiConverterTypeRemoteInfo.read(from: &buf)
-        default: throw UniffiInternalError.unexpectedOptionalTag
-        }
-    }
-}
-
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterOptionTypeTransferStats: FfiConverterRustBuffer {
     typealias SwiftType = TransferStats?
 
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         guard let value = value else {
             writeInt(&buf, Int8(0))
             return
@@ -17128,7 +16661,7 @@ private struct FfiConverterOptionTypeTransferStats: FfiConverterRustBuffer {
         FfiConverterTypeTransferStats.write(value, into: &buf)
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeTransferStats.read(from: &buf)
@@ -17143,7 +16676,7 @@ private struct FfiConverterOptionTypeTransferStats: FfiConverterRustBuffer {
 private struct FfiConverterOptionTypeNodeDiscoveryConfig: FfiConverterRustBuffer {
     typealias SwiftType = NodeDiscoveryConfig?
 
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         guard let value = value else {
             writeInt(&buf, Int8(0))
             return
@@ -17152,7 +16685,7 @@ private struct FfiConverterOptionTypeNodeDiscoveryConfig: FfiConverterRustBuffer
         FfiConverterTypeNodeDiscoveryConfig.write(value, into: &buf)
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeNodeDiscoveryConfig.read(from: &buf)
@@ -17167,7 +16700,7 @@ private struct FfiConverterOptionTypeNodeDiscoveryConfig: FfiConverterRustBuffer
 private struct FfiConverterOptionSequenceData: FfiConverterRustBuffer {
     typealias SwiftType = [Data]?
 
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         guard let value = value else {
             writeInt(&buf, Int8(0))
             return
@@ -17176,7 +16709,7 @@ private struct FfiConverterOptionSequenceData: FfiConverterRustBuffer {
         FfiConverterSequenceData.write(value, into: &buf)
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterSequenceData.read(from: &buf)
@@ -17191,7 +16724,7 @@ private struct FfiConverterOptionSequenceData: FfiConverterRustBuffer {
 private struct FfiConverterOptionDictionaryDataTypeProtocolCreator: FfiConverterRustBuffer {
     typealias SwiftType = [Data: ProtocolCreator]?
 
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         guard let value = value else {
             writeInt(&buf, Int8(0))
             return
@@ -17200,7 +16733,7 @@ private struct FfiConverterOptionDictionaryDataTypeProtocolCreator: FfiConverter
         FfiConverterDictionaryDataTypeProtocolCreator.write(value, into: &buf)
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterDictionaryDataTypeProtocolCreator.read(from: &buf)
@@ -17215,7 +16748,7 @@ private struct FfiConverterOptionDictionaryDataTypeProtocolCreator: FfiConverter
 private struct FfiConverterSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]
 
-    public static func write(_ value: [String], into buf: inout [UInt8]) {
+    static func write(_ value: [String], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
@@ -17223,7 +16756,7 @@ private struct FfiConverterSequenceString: FfiConverterRustBuffer {
         }
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String] {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String] {
         let len: Int32 = try readInt(&buf)
         var seq = [String]()
         seq.reserveCapacity(Int(len))
@@ -17240,7 +16773,7 @@ private struct FfiConverterSequenceString: FfiConverterRustBuffer {
 private struct FfiConverterSequenceData: FfiConverterRustBuffer {
     typealias SwiftType = [Data]
 
-    public static func write(_ value: [Data], into buf: inout [UInt8]) {
+    static func write(_ value: [Data], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
@@ -17248,7 +16781,7 @@ private struct FfiConverterSequenceData: FfiConverterRustBuffer {
         }
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Data] {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Data] {
         let len: Int32 = try readInt(&buf)
         var seq = [Data]()
         seq.reserveCapacity(Int(len))
@@ -17265,7 +16798,7 @@ private struct FfiConverterSequenceData: FfiConverterRustBuffer {
 private struct FfiConverterSequenceTypeAuthorId: FfiConverterRustBuffer {
     typealias SwiftType = [AuthorId]
 
-    public static func write(_ value: [AuthorId], into buf: inout [UInt8]) {
+    static func write(_ value: [AuthorId], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
@@ -17273,7 +16806,7 @@ private struct FfiConverterSequenceTypeAuthorId: FfiConverterRustBuffer {
         }
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [AuthorId] {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [AuthorId] {
         let len: Int32 = try readInt(&buf)
         var seq = [AuthorId]()
         seq.reserveCapacity(Int(len))
@@ -17290,7 +16823,7 @@ private struct FfiConverterSequenceTypeAuthorId: FfiConverterRustBuffer {
 private struct FfiConverterSequenceTypeDirectAddrInfo: FfiConverterRustBuffer {
     typealias SwiftType = [DirectAddrInfo]
 
-    public static func write(_ value: [DirectAddrInfo], into buf: inout [UInt8]) {
+    static func write(_ value: [DirectAddrInfo], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
@@ -17298,7 +16831,7 @@ private struct FfiConverterSequenceTypeDirectAddrInfo: FfiConverterRustBuffer {
         }
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [DirectAddrInfo] {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [DirectAddrInfo] {
         let len: Int32 = try readInt(&buf)
         var seq = [DirectAddrInfo]()
         seq.reserveCapacity(Int(len))
@@ -17315,7 +16848,7 @@ private struct FfiConverterSequenceTypeDirectAddrInfo: FfiConverterRustBuffer {
 private struct FfiConverterSequenceTypeEntry: FfiConverterRustBuffer {
     typealias SwiftType = [Entry]
 
-    public static func write(_ value: [Entry], into buf: inout [UInt8]) {
+    static func write(_ value: [Entry], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
@@ -17323,7 +16856,7 @@ private struct FfiConverterSequenceTypeEntry: FfiConverterRustBuffer {
         }
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Entry] {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Entry] {
         let len: Int32 = try readInt(&buf)
         var seq = [Entry]()
         seq.reserveCapacity(Int(len))
@@ -17340,7 +16873,7 @@ private struct FfiConverterSequenceTypeEntry: FfiConverterRustBuffer {
 private struct FfiConverterSequenceTypeFilterKind: FfiConverterRustBuffer {
     typealias SwiftType = [FilterKind]
 
-    public static func write(_ value: [FilterKind], into buf: inout [UInt8]) {
+    static func write(_ value: [FilterKind], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
@@ -17348,7 +16881,7 @@ private struct FfiConverterSequenceTypeFilterKind: FfiConverterRustBuffer {
         }
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FilterKind] {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FilterKind] {
         let len: Int32 = try readInt(&buf)
         var seq = [FilterKind]()
         seq.reserveCapacity(Int(len))
@@ -17365,7 +16898,7 @@ private struct FfiConverterSequenceTypeFilterKind: FfiConverterRustBuffer {
 private struct FfiConverterSequenceTypeHash: FfiConverterRustBuffer {
     typealias SwiftType = [Hash]
 
-    public static func write(_ value: [Hash], into buf: inout [UInt8]) {
+    static func write(_ value: [Hash], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
@@ -17373,7 +16906,7 @@ private struct FfiConverterSequenceTypeHash: FfiConverterRustBuffer {
         }
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Hash] {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Hash] {
         let len: Int32 = try readInt(&buf)
         var seq = [Hash]()
         seq.reserveCapacity(Int(len))
@@ -17390,7 +16923,7 @@ private struct FfiConverterSequenceTypeHash: FfiConverterRustBuffer {
 private struct FfiConverterSequenceTypeNodeAddr: FfiConverterRustBuffer {
     typealias SwiftType = [NodeAddr]
 
-    public static func write(_ value: [NodeAddr], into buf: inout [UInt8]) {
+    static func write(_ value: [NodeAddr], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
@@ -17398,7 +16931,7 @@ private struct FfiConverterSequenceTypeNodeAddr: FfiConverterRustBuffer {
         }
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [NodeAddr] {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [NodeAddr] {
         let len: Int32 = try readInt(&buf)
         var seq = [NodeAddr]()
         seq.reserveCapacity(Int(len))
@@ -17415,7 +16948,7 @@ private struct FfiConverterSequenceTypeNodeAddr: FfiConverterRustBuffer {
 private struct FfiConverterSequenceTypeCollectionInfo: FfiConverterRustBuffer {
     typealias SwiftType = [CollectionInfo]
 
-    public static func write(_ value: [CollectionInfo], into buf: inout [UInt8]) {
+    static func write(_ value: [CollectionInfo], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
@@ -17423,7 +16956,7 @@ private struct FfiConverterSequenceTypeCollectionInfo: FfiConverterRustBuffer {
         }
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CollectionInfo] {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CollectionInfo] {
         let len: Int32 = try readInt(&buf)
         var seq = [CollectionInfo]()
         seq.reserveCapacity(Int(len))
@@ -17440,7 +16973,7 @@ private struct FfiConverterSequenceTypeCollectionInfo: FfiConverterRustBuffer {
 private struct FfiConverterSequenceTypeIncompleteBlobInfo: FfiConverterRustBuffer {
     typealias SwiftType = [IncompleteBlobInfo]
 
-    public static func write(_ value: [IncompleteBlobInfo], into buf: inout [UInt8]) {
+    static func write(_ value: [IncompleteBlobInfo], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
@@ -17448,7 +16981,7 @@ private struct FfiConverterSequenceTypeIncompleteBlobInfo: FfiConverterRustBuffe
         }
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [IncompleteBlobInfo] {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [IncompleteBlobInfo] {
         let len: Int32 = try readInt(&buf)
         var seq = [IncompleteBlobInfo]()
         seq.reserveCapacity(Int(len))
@@ -17465,7 +16998,7 @@ private struct FfiConverterSequenceTypeIncompleteBlobInfo: FfiConverterRustBuffe
 private struct FfiConverterSequenceTypeLinkAndName: FfiConverterRustBuffer {
     typealias SwiftType = [LinkAndName]
 
-    public static func write(_ value: [LinkAndName], into buf: inout [UInt8]) {
+    static func write(_ value: [LinkAndName], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
@@ -17473,7 +17006,7 @@ private struct FfiConverterSequenceTypeLinkAndName: FfiConverterRustBuffer {
         }
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [LinkAndName] {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [LinkAndName] {
         let len: Int32 = try readInt(&buf)
         var seq = [LinkAndName]()
         seq.reserveCapacity(Int(len))
@@ -17490,7 +17023,7 @@ private struct FfiConverterSequenceTypeLinkAndName: FfiConverterRustBuffer {
 private struct FfiConverterSequenceTypeNamespaceAndCapability: FfiConverterRustBuffer {
     typealias SwiftType = [NamespaceAndCapability]
 
-    public static func write(_ value: [NamespaceAndCapability], into buf: inout [UInt8]) {
+    static func write(_ value: [NamespaceAndCapability], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
@@ -17498,7 +17031,7 @@ private struct FfiConverterSequenceTypeNamespaceAndCapability: FfiConverterRustB
         }
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [NamespaceAndCapability] {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [NamespaceAndCapability] {
         let len: Int32 = try readInt(&buf)
         var seq = [NamespaceAndCapability]()
         seq.reserveCapacity(Int(len))
@@ -17512,35 +17045,10 @@ private struct FfiConverterSequenceTypeNamespaceAndCapability: FfiConverterRustB
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
-private struct FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer {
-    typealias SwiftType = [RemoteInfo]
-
-    public static func write(_ value: [RemoteInfo], into buf: inout [UInt8]) {
-        let len = Int32(value.count)
-        writeInt(&buf, len)
-        for item in value {
-            FfiConverterTypeRemoteInfo.write(item, into: &buf)
-        }
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [RemoteInfo] {
-        let len: Int32 = try readInt(&buf)
-        var seq = [RemoteInfo]()
-        seq.reserveCapacity(Int(len))
-        for _ in 0 ..< len {
-            try seq.append(FfiConverterTypeRemoteInfo.read(from: &buf))
-        }
-        return seq
-    }
-}
-
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterSequenceTypeTagInfo: FfiConverterRustBuffer {
     typealias SwiftType = [TagInfo]
 
-    public static func write(_ value: [TagInfo], into buf: inout [UInt8]) {
+    static func write(_ value: [TagInfo], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
@@ -17548,7 +17056,7 @@ private struct FfiConverterSequenceTypeTagInfo: FfiConverterRustBuffer {
         }
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [TagInfo] {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [TagInfo] {
         let len: Int32 = try readInt(&buf)
         var seq = [TagInfo]()
         seq.reserveCapacity(Int(len))
@@ -17562,34 +17070,8 @@ private struct FfiConverterSequenceTypeTagInfo: FfiConverterRustBuffer {
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
-private struct FfiConverterDictionaryStringTypeCounterStats: FfiConverterRustBuffer {
-    public static func write(_ value: [String: CounterStats], into buf: inout [UInt8]) {
-        let len = Int32(value.count)
-        writeInt(&buf, len)
-        for (key, value) in value {
-            FfiConverterString.write(key, into: &buf)
-            FfiConverterTypeCounterStats.write(value, into: &buf)
-        }
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: CounterStats] {
-        let len: Int32 = try readInt(&buf)
-        var dict = [String: CounterStats]()
-        dict.reserveCapacity(Int(len))
-        for _ in 0 ..< len {
-            let key = try FfiConverterString.read(from: &buf)
-            let value = try FfiConverterTypeCounterStats.read(from: &buf)
-            dict[key] = value
-        }
-        return dict
-    }
-}
-
-#if swift(>=5.8)
-    @_documentation(visibility: private)
-#endif
 private struct FfiConverterDictionaryDataTypeProtocolCreator: FfiConverterRustBuffer {
-    public static func write(_ value: [Data: ProtocolCreator], into buf: inout [UInt8]) {
+    static func write(_ value: [Data: ProtocolCreator], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for (key, value) in value {
@@ -17598,7 +17080,7 @@ private struct FfiConverterDictionaryDataTypeProtocolCreator: FfiConverterRustBu
         }
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Data: ProtocolCreator] {
+    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Data: ProtocolCreator] {
         let len: Int32 = try readInt(&buf)
         var dict = [Data: ProtocolCreator]()
         dict.reserveCapacity(Int(len))
@@ -17730,7 +17212,7 @@ public func uniffiForeignFutureHandleCountIrohFfi() -> Int {
  *
  * If `prefix` exists, it will be stripped before converting back to a path
  * If `root` exists, will add the root as a parent to the created path
- * Removes any null byte that has been appened to the key
+ * Removes any null byte that has been appended to the key
  */
 public func keyToPath(key: Data, prefix: String?, root: String?) throws -> String {
     return try FfiConverterString.lift(rustCallWithError(FfiConverterTypeIrohError__as_error.lift) {
@@ -17783,7 +17265,7 @@ private var initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if uniffi_iroh_ffi_checksum_func_key_to_path() != 28001 {
+    if uniffi_iroh_ffi_checksum_func_key_to_path() != 31665 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_iroh_ffi_checksum_func_path_to_key() != 4438 {
@@ -17876,7 +17358,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_iroh_ffi_checksum_method_blobprovideeventcallback_blob_event() != 43399 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_blobticket_as_download_options() != 18713 {
+    if uniffi_iroh_ffi_checksum_method_blobticket_as_download_options() != 9523 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_iroh_ffi_checksum_method_blobticket_format() != 35808 {
@@ -17897,10 +17379,10 @@ private var initializationResult: InitializationResult = {
     if uniffi_iroh_ffi_checksum_method_blobs_add_bytes_named() != 4623 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_blobs_add_from_path() != 12412 {
+    if uniffi_iroh_ffi_checksum_method_blobs_add_from_path() != 54045 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_blobs_create_collection() != 63440 {
+    if uniffi_iroh_ffi_checksum_method_blobs_create_collection() != 1594 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_iroh_ffi_checksum_method_blobs_delete_blob() != 24901 {
@@ -17909,7 +17391,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_iroh_ffi_checksum_method_blobs_download() != 14779 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_blobs_export() != 23697 {
+    if uniffi_iroh_ffi_checksum_method_blobs_export() != 13291 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_iroh_ffi_checksum_method_blobs_get_collection() != 57130 {
@@ -17921,7 +17403,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_iroh_ffi_checksum_method_blobs_list() != 9714 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_blobs_list_collections() != 22274 {
+    if uniffi_iroh_ffi_checksum_method_blobs_list_collections() != 36508 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_iroh_ffi_checksum_method_blobs_list_incomplete() != 31740 {
@@ -17933,7 +17415,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_iroh_ffi_checksum_method_blobs_read_to_bytes() != 13624 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_blobs_share() != 35831 {
+    if uniffi_iroh_ffi_checksum_method_blobs_share() != 64711 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_iroh_ffi_checksum_method_blobs_size() != 20254 {
@@ -17975,7 +17457,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_iroh_ffi_checksum_method_connection_accept_uni() != 17891 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_connection_alpn() != 53975 {
+    if uniffi_iroh_ffi_checksum_method_connection_alpn() != 41272 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_iroh_ffi_checksum_method_connection_close() != 61009 {
@@ -18002,7 +17484,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_iroh_ffi_checksum_method_connection_read_datagram() != 23201 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_connection_remote_node_id() != 59577 {
+    if uniffi_iroh_ffi_checksum_method_connection_remote_node_id() != 22215 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_iroh_ffi_checksum_method_connection_rtt() != 61654 {
@@ -18185,7 +17667,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_iroh_ffi_checksum_method_endpoint_connect() != 29734 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_endpoint_node_id() != 54517 {
+    if uniffi_iroh_ffi_checksum_method_endpoint_node_id() != 41034 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_iroh_ffi_checksum_method_entry_author() != 39787 {
@@ -18224,25 +17706,25 @@ private var initializationResult: InitializationResult = {
     if uniffi_iroh_ffi_checksum_method_hash_to_hex() != 52108 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_iroh_authors() != 61389 {
+    if uniffi_iroh_ffi_checksum_method_iroh_authors() != 8887 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_iroh_blobs() != 50340 {
+    if uniffi_iroh_ffi_checksum_method_iroh_blobs() != 38327 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_iroh_docs() != 17607 {
+    if uniffi_iroh_ffi_checksum_method_iroh_docs() != 51648 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_iroh_gossip() != 58884 {
+    if uniffi_iroh_ffi_checksum_method_iroh_gossip() != 31948 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_iroh_net() != 41953 {
+    if uniffi_iroh_ffi_checksum_method_iroh_net() != 64741 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_iroh_node() != 12499 {
+    if uniffi_iroh_ffi_checksum_method_iroh_node() != 58354 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_iroh_tags() != 59606 {
+    if uniffi_iroh_ffi_checksum_method_iroh_tags() != 29956 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_iroh_ffi_checksum_method_iroherror_message() != 31085 {
@@ -18272,9 +17754,6 @@ private var initializationResult: InitializationResult = {
     if uniffi_iroh_ffi_checksum_method_message_as_error() != 9059 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_message_as_joined() != 39463 {
-        return InitializationResult.apiChecksumMismatch
-    }
     if uniffi_iroh_ffi_checksum_method_message_as_neighbor_down() != 19092 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -18287,34 +17766,25 @@ private var initializationResult: InitializationResult = {
     if uniffi_iroh_ffi_checksum_method_message_type() != 75 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_net_add_node_addr() != 17723 {
+    if uniffi_iroh_ffi_checksum_method_net_add_node_addr() != 50935 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_net_home_relay() != 3492 {
+    if uniffi_iroh_ffi_checksum_method_net_latency() != 187 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_net_node_addr() != 60712 {
+    if uniffi_iroh_ffi_checksum_method_net_node_addr() != 35853 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_net_node_id() != 35201 {
+    if uniffi_iroh_ffi_checksum_method_net_node_id() != 55035 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_net_remote_info() != 60537 {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if uniffi_iroh_ffi_checksum_method_net_remote_info_list() != 15919 {
+    if uniffi_iroh_ffi_checksum_method_net_wait_online() != 58401 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_iroh_ffi_checksum_method_node_endpoint() != 6829 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_iroh_ffi_checksum_method_node_shutdown() != 49624 {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if uniffi_iroh_ffi_checksum_method_node_stats() != 13439 {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if uniffi_iroh_ffi_checksum_method_node_status() != 21889 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_iroh_ffi_checksum_method_nodeaddr_direct_addresses() != 23787 {
@@ -18324,21 +17794,6 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_iroh_ffi_checksum_method_nodeaddr_relay_url() != 34772 {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if uniffi_iroh_ffi_checksum_method_nodestatus_listen_addrs() != 54436 {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if uniffi_iroh_ffi_checksum_method_nodestatus_node_addr() != 12507 {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if uniffi_iroh_ffi_checksum_method_nodestatus_rpc_addr() != 20002 {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if uniffi_iroh_ffi_checksum_method_nodestatus_version() != 3183 {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if uniffi_iroh_ffi_checksum_method_nodeticket_node_addr() != 3397 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_iroh_ffi_checksum_method_protocolcreator_create() != 33391 {
@@ -18489,12 +17944,6 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_iroh_ffi_checksum_constructor_nodeaddr_new() != 5759 {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if uniffi_iroh_ffi_checksum_constructor_nodeticket_new() != 8609 {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if uniffi_iroh_ffi_checksum_constructor_nodeticket_parse() != 16834 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_iroh_ffi_checksum_constructor_publickey_from_bytes() != 64011 {

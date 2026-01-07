@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{BlobFormat, Hash, Iroh, IrohError, TagsClient};
+use crate::{BlobFormat, Hash, Iroh, IrohError};
 use bytes::Bytes;
 use futures::TryStreamExt;
 
@@ -15,8 +15,8 @@ pub struct TagInfo {
     pub hash: Arc<Hash>,
 }
 
-impl From<iroh_blobs::rpc::client::tags::TagInfo> for TagInfo {
-    fn from(res: iroh_blobs::rpc::client::tags::TagInfo) -> Self {
+impl From<iroh_blobs::api::tags::TagInfo> for TagInfo {
+    fn from(res: iroh_blobs::api::tags::TagInfo) -> Self {
         TagInfo {
             name: res.name.0.to_vec(),
             format: res.format.into(),
@@ -28,15 +28,15 @@ impl From<iroh_blobs::rpc::client::tags::TagInfo> for TagInfo {
 /// Iroh tags client.
 #[derive(uniffi::Object)]
 pub struct Tags {
-    client: TagsClient,
+    store: iroh_blobs::api::Store,
 }
 
 #[uniffi::export]
 impl Iroh {
-    /// Access to tags specific funtionaliy.
+    /// Access to tags specific functionality.
     pub fn tags(&self) -> Tags {
         Tags {
-            client: self.tags_client.clone(),
+            store: self.store.clone(),
         }
     }
 }
@@ -50,20 +50,24 @@ impl Tags {
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn list(&self) -> Result<Vec<TagInfo>, IrohError> {
         let tags = self
-            .client
+            .store
+            .tags()
             .list()
-            .await?
+            .await
+            .map_err(|e| anyhow::anyhow!("{e}"))?
             .map_ok(|l| l.into())
             .try_collect::<Vec<_>>()
-            .await?;
+            .await
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
         Ok(tags)
     }
 
     /// Delete a tag
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn delete(&self, name: Vec<u8>) -> Result<(), IrohError> {
-        let tag = iroh_blobs::Tag(Bytes::from(name));
-        self.client.delete(tag).await?;
+        let tag = iroh_blobs::api::Tag(Bytes::from(name));
+        self.store.tags().delete(tag).await
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
         Ok(())
     }
 }

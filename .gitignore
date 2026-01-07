@@ -112,3 +112,10 @@ package-lock.json
 
 kotlin/*.jar
 kotlin/**/*.dylib
+
+# Test directories
+blake3-test/
+blake3-test-nixberg/
+
+# IrohLib Swift build
+IrohLib/.build/

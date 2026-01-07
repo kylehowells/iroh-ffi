@@ -17,9 +17,9 @@ impl Endpoint {
 #[uniffi::export]
 impl Endpoint {
     #[uniffi::method]
-    /// The string representation of this endpoint's NodeId.
+    /// The string representation of this endpoint's EndpointId.
     pub fn node_id(&self) -> Result<String, IrohError> {
-        let id = self.0.node_id();
+        let id = self.0.id();
         Ok(id.to_string())
     }
 
@@ -29,8 +29,8 @@ impl Endpoint {
         node_addr: &NodeAddr,
         alpn: &[u8],
     ) -> Result<Connection, IrohError> {
-        let node_addr: iroh::NodeAddr = node_addr.clone().try_into()?;
-        let conn = self.0.connect(node_addr, alpn).await?;
+        let endpoint_addr: iroh::EndpointAddr = node_addr.clone().try_into()?;
+        let conn = self.0.connect(endpoint_addr, alpn).await.map_err(|e| anyhow::anyhow!("{e}"))?;
         Ok(Connection(conn))
     }
 }
@@ -61,7 +61,7 @@ impl Connecting {
     pub async fn alpn(&self) -> Result<Vec<u8>, IrohError> {
         match &mut *self.0.lock().await {
             Some(conn) => {
-                let alpn = conn.alpn().await?;
+                let alpn = conn.alpn().await.map_err(|e| anyhow::anyhow!("{e}"))?;
                 Ok(alpn)
             }
             None => Err(anyhow::anyhow!("already used").into()),
@@ -81,8 +81,8 @@ impl From<endpoint::Connection> for Connection {
 #[uniffi::export]
 impl Connection {
     #[uniffi::method]
-    pub fn alpn(&self) -> Option<Vec<u8>> {
-        self.0.alpn()
+    pub fn alpn(&self) -> Vec<u8> {
+        self.0.alpn().to_vec()
     }
 
     #[uniffi::method(async_runtime = "tokio")]
@@ -159,9 +159,9 @@ impl Connection {
     }
 
     #[uniffi::method]
-    pub fn remote_node_id(&self) -> Result<String, IrohError> {
-        let id = self.0.remote_node_id()?;
-        Ok(id.to_string())
+    pub fn remote_node_id(&self) -> String {
+        let id = self.0.remote_id();
+        id.to_string()
     }
 
     #[uniffi::method]

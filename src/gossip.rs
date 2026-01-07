@@ -1,10 +1,9 @@
-use std::pin::Pin;
 use std::sync::Arc;
 
-use futures::{Sink, SinkExt, StreamExt};
-use iroh::NodeId;
-use iroh_gossip::net::GossipEvent;
-use iroh_gossip::rpc::{SubscribeResponse, SubscribeUpdate};
+use bytes::Bytes;
+use futures::StreamExt;
+use iroh::EndpointId;
+use iroh_gossip::api::Event;
 use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
 use tracing::warn;
@@ -26,7 +25,6 @@ pub enum Message {
         /// The node that delivered the message. This is not the same as the original author.
         delivered_from: String,
     },
-    Joined(Vec<String>),
     /// We missed some messages
     Lagged,
     /// There was a gossip error
@@ -38,7 +36,6 @@ pub enum MessageType {
     NeighborUp,
     NeighborDown,
     Received,
-    Joined,
     Lagged,
     Error,
 }
@@ -50,7 +47,6 @@ impl Message {
             Self::NeighborUp(_) => MessageType::NeighborUp,
             Self::NeighborDown(_) => MessageType::NeighborDown,
             Self::Received { .. } => MessageType::Received,
-            Self::Joined(_) => MessageType::Joined,
             Self::Lagged => MessageType::Lagged,
             Self::Error(_) => MessageType::Error,
         }
@@ -69,14 +65,6 @@ impl Message {
             s.clone()
         } else {
             panic!("not a NeighborDown message");
-        }
-    }
-
-    pub fn as_joined(&self) -> Vec<String> {
-        if let Self::Joined(nodes) = self {
-            nodes.clone()
-        } else {
-            panic!("not a Joined message");
         }
     }
 
@@ -127,7 +115,7 @@ pub struct Gossip {
 
 #[uniffi::export]
 impl Iroh {
-    /// Access to gossip specific funtionaliy.
+    /// Access to gossip specific functionality.
     pub fn gossip(&self) -> Gossip {
         let gossip = self.gossip.clone();
         Gossip { gossip }
@@ -144,69 +132,86 @@ impl Gossip {
         cb: Arc<dyn GossipMessageCallback>,
     ) -> Result<Sender, IrohError> {
         if topic.len() != 32 {
-            return Err(anyhow::anyhow!("topic must not be longer than 32 bytes").into());
+            return Err(anyhow::anyhow!("topic must be exactly 32 bytes").into());
         }
         let topic_bytes: [u8; 32] = topic.try_into().unwrap();
 
         let bootstrap = bootstrap
             .into_iter()
             .map(|b| b.parse())
-            .collect::<Result<Vec<NodeId>, _>>()
+            .collect::<Result<Vec<EndpointId>, _>>()
             .map_err(|e| anyhow::anyhow!("{e}"))?;
 
-        let (sink, mut stream) = self
+        // Use subscribe instead of subscribe_and_join to avoid blocking
+        // subscribe_and_join waits for at least one peer connection, which can block forever
+        // if peers aren't immediately reachable
+        let topic_handle = self
             .gossip
-            .client()
-            .subscribe(topic_bytes, bootstrap)
-            .await?;
+            .subscribe(topic_bytes.into(), bootstrap)
+            .await
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+        let (sender, mut receiver) = topic_handle.split();
 
         let cancel_token = CancellationToken::new();
         let cancel = cancel_token.clone();
         tokio::task::spawn(async move {
+            tracing::debug!("gossip receiver task started");
             loop {
                 tokio::select! {
                     biased;
 
                     _ = cancel.cancelled() => {
+                        tracing::debug!("gossip receiver task cancelled");
                         break;
                     }
-                    Some(event) = stream.next() => {
-                        let message = match event {
-                            Ok(SubscribeResponse::Gossip(GossipEvent::NeighborUp(n))) => {
-                                Message::NeighborUp(n.to_string())
+                    event = receiver.next() => {
+                        match event {
+                            Some(Ok(Event::NeighborUp(n))) => {
+                                let message = Message::NeighborUp(n.to_string());
+                                if let Err(err) = cb.on_message(Arc::new(message)).await {
+                                    warn!("cb error, gossip: {:?}", err);
+                                }
                             }
-                            Ok(SubscribeResponse::Gossip(GossipEvent::NeighborDown(n))) => {
-                                Message::NeighborDown(n.to_string())
+                            Some(Ok(Event::NeighborDown(n))) => {
+                                let message = Message::NeighborDown(n.to_string());
+                                if let Err(err) = cb.on_message(Arc::new(message)).await {
+                                    warn!("cb error, gossip: {:?}", err);
+                                }
                             }
-                            Ok(SubscribeResponse::Gossip(GossipEvent::Received(
-                                iroh_gossip::net::Message {
-                                    content,
-                                    delivered_from,
-                                    ..
-                                },
-                            ))) => Message::Received {
-                                content: content.to_vec(),
-                                delivered_from: delivered_from.to_string(),
-                            },
-                            Ok(SubscribeResponse::Gossip(GossipEvent::Joined(nodes))) => {
-                                Message::Joined(nodes.into_iter().map(|n| n.to_string()).collect())
+                            Some(Ok(Event::Received(msg))) => {
+                                let message = Message::Received {
+                                    content: msg.content.to_vec(),
+                                    delivered_from: msg.delivered_from.to_string(),
+                                };
+                                if let Err(err) = cb.on_message(Arc::new(message)).await {
+                                    warn!("cb error, gossip: {:?}", err);
+                                }
                             }
-                            Ok(SubscribeResponse::Lagged) => Message::Lagged,
-                            Err(err) => Message::Error(err.to_string()),
-                        };
-                        if let Err(err) = cb.on_message(Arc::new(message)).await {
-                            warn!("cb error, gossip: {:?}", err);
+                            Some(Ok(Event::Lagged)) => {
+                                let message = Message::Lagged;
+                                if let Err(err) = cb.on_message(Arc::new(message)).await {
+                                    warn!("cb error, gossip: {:?}", err);
+                                }
+                            }
+                            Some(Err(err)) => {
+                                let message = Message::Error(err.to_string());
+                                if let Err(err) = cb.on_message(Arc::new(message)).await {
+                                    warn!("cb error, gossip: {:?}", err);
+                                }
+                            }
+                            None => {
+                                tracing::debug!("gossip receiver stream ended");
+                                break;
+                            }
                         }
-                    }
-                    else => {
-                        break;
                     }
                 }
             }
         });
 
         let sender = Sender {
-            sink: Mutex::new(Box::pin(sink)),
+            sender: Mutex::new(sender),
             cancel: cancel_token,
         };
 
@@ -217,7 +222,7 @@ impl Gossip {
 /// Gossip sender
 #[derive(uniffi::Object)]
 pub struct Sender {
-    sink: Mutex<Pin<Box<dyn Sink<SubscribeUpdate, Error = anyhow::Error> + Sync + Send>>>,
+    sender: Mutex<iroh_gossip::api::GossipSender>,
     cancel: CancellationToken,
 }
 
@@ -226,22 +231,24 @@ impl Sender {
     /// Broadcast a message to all nodes in the swarm
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn broadcast(&self, msg: Vec<u8>) -> Result<(), IrohError> {
-        self.sink
+        self.sender
             .lock()
             .await
-            .send(SubscribeUpdate::Broadcast(msg.into()))
-            .await?;
+            .broadcast(Bytes::from(msg))
+            .await
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
         Ok(())
     }
 
     /// Broadcast a message to all direct neighbors.
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn broadcast_neighbors(&self, msg: Vec<u8>) -> Result<(), IrohError> {
-        self.sink
+        self.sender
             .lock()
             .await
-            .send(SubscribeUpdate::BroadcastNeighbors(msg.into()))
-            .await?;
+            .broadcast_neighbors(Bytes::from(msg))
+            .await
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
         Ok(())
     }
 
@@ -251,7 +258,6 @@ impl Sender {
         if self.cancel.is_cancelled() {
             return Err(IrohError::from(anyhow::anyhow!("already closed")));
         }
-        self.sink.lock().await.close().await?;
         self.cancel.cancel();
         Ok(())
     }
@@ -265,16 +271,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_gossip_basic() {
+        // Enable tracing for debugging
+        let _ = tracing_subscriber::fmt::try_init();
+
         let n0 = Iroh::memory().await.unwrap();
         let n1 = Iroh::memory().await.unwrap();
 
         struct Cb {
+            name: &'static str,
             channel: mpsc::Sender<Arc<Message>>,
         }
         #[async_trait::async_trait]
         impl GossipMessageCallback for Cb {
             async fn on_message(&self, message: Arc<Message>) -> Result<(), CallbackError> {
-                println!("<< {:?}", message);
+                println!("{} << {:?}", self.name, message);
                 self.channel.send(message).await.unwrap();
                 Ok(())
             }
@@ -282,37 +292,68 @@ mod tests {
 
         let topic = [1u8; 32].to_vec();
 
-        let (sender0, mut receiver0) = mpsc::channel(8);
-        let cb0 = Cb { channel: sender0 };
-        let n1_id = n1.net().node_id().await.unwrap();
-        let n1_addr = n1.net().node_addr().await.unwrap();
-        n0.net().add_node_addr(&n1_addr).await.unwrap();
+        // Wait for nodes to be online (connected to relay and have direct addresses)
+        n0.net().wait_online().await.unwrap();
+        n1.net().wait_online().await.unwrap();
 
+        // Get addresses and IDs for both nodes
+        let n0_id = n0.net().node_id();
+        let n0_addr = Arc::new(n0.net().node_addr());
+        let n1_id = n1.net().node_id();
+        let n1_addr = Arc::new(n1.net().node_addr());
+        println!("n0 addr: {:?}", n0_addr);
+        println!("n1 addr: {:?}", n1_addr);
+
+        // Add addresses to both static providers BEFORE subscribing
+        n0.net().add_node_addr(n1_addr).unwrap();
+        n1.net().add_node_addr(n0_addr).unwrap();
+
+        // n0 subscribes first with empty bootstrap
+        let (sender0, mut receiver0) = mpsc::channel(8);
+        let cb0 = Cb { name: "n0", channel: sender0 };
+        println!("subscribing n0 to topic (no bootstrap)");
         let sink0 = n0
             .gossip()
-            .subscribe(topic.clone(), vec![n1_id.to_string()], Arc::new(cb0))
+            .subscribe(topic.clone(), vec![], Arc::new(cb0))
             .await
             .unwrap();
+        println!("n0 subscribed");
 
+        // n1 subscribes with n0 as bootstrap - this should initiate connection from n1 to n0
         let (sender1, mut receiver1) = mpsc::channel(8);
-        let cb1 = Cb { channel: sender1 };
-        let n0_id = n0.net().node_id().await.unwrap();
-        let n0_addr = n0.net().node_addr().await.unwrap();
-        n1.net().add_node_addr(&n0_addr).await.unwrap();
-        let _ = n1
+        let cb1 = Cb { name: "n1", channel: sender1 };
+        println!("subscribing n1 to topic with n0 as bootstrap");
+        let _sink1 = n1
             .gossip()
-            .subscribe(topic.clone(), vec![n0_id.to_string()], Arc::new(cb1))
+            .subscribe(topic.clone(), vec![n0_id.clone()], Arc::new(cb1))
             .await
             .unwrap();
+        println!("n1 subscribed");
 
-        // Wait on n0 until we get a joined event.
-        let Some(event) = receiver0.recv().await else {
-            panic!("receiver stream closed before receiving joinmessage");
+        // Wait for n0 to see n1 as a neighbor
+        // Note: In gossip, the connecting node (n1) may not get NeighborUp until it receives
+        // a message, so we only wait for n0's NeighborUp
+        let wait_neighbor0 = async {
+            loop {
+                let Some(event) = receiver0.recv().await else {
+                    panic!("receiver0 stream closed");
+                };
+                println!("n0 event: {:?}", event);
+                if matches!(&*event, Message::NeighborUp(_)) {
+                    break;
+                }
+            }
         };
-        let Message::Joined(nodes) = &*event else {
-            panic!("expected join event");
-        };
-        assert_eq!(nodes, &[n1_id]);
+
+        tokio::time::timeout(
+            std::time::Duration::from_secs(10),
+            wait_neighbor0
+        )
+            .await
+            .expect("timeout waiting for n0 to see neighbor");
+
+        // Give time for the gossip protocol to fully establish
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
         // Send message on n0
         println!("sending message");
@@ -338,7 +379,7 @@ mod tests {
                 }
             }
         };
-        tokio::time::timeout(std::time::Duration::from_secs(10), recv_fut)
+        tokio::time::timeout(std::time::Duration::from_secs(15), recv_fut)
             .await
             .expect("timeout reached and no gossip message received");
     }

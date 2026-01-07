@@ -1,4 +1,4 @@
-# tests that correspond to the `src/gossp.rs` rust api
+# tests that correspond to the `src/gossip.rs` rust api
 import pytest
 import asyncio
 import iroh
@@ -23,46 +23,56 @@ async def test_gossip_basic():
     n0 = await Iroh.memory()
     n1 = await Iroh.memory()
 
+    # Wait for nodes to be online (connected to relay and have addresses)
+    await n0.net().wait_online()
+    await n1.net().wait_online()
+
     # Create a topic
     topic = bytearray([1] * 32)
 
-    # Setup gossip on node 0
+    # Get addresses and IDs for both nodes (sync in 0.95)
+    n0_id = n0.net().node_id()
+    n0_addr = n0.net().node_addr()
+    n1_id = n1.net().node_id()
+    n1_addr = n1.net().node_addr()
+
+    print(f"n0 addr: {n0_addr}")
+    print(f"n1 addr: {n1_addr}")
+
+    # Add peer addresses to StaticProvider for discovery
+    n0.net().add_node_addr(n1_addr)
+    n1.net().add_node_addr(n0_addr)
+
+    # n0 subscribes with empty bootstrap
     cb0 = Callback("n0")
-    n1_id = await n1.net().node_id()
-    n1_addr = await n1.net().node_addr()
-    await n0.net().add_node_addr(n1_addr)
-
     print("subscribe n0")
-    sink0 = await n0.gossip().subscribe(topic, [n1_id], cb0)
+    sink0 = await n0.gossip().subscribe(topic, [], cb0)
 
-    # Setup gossip on node 1
+    # n1 subscribes with n0 as bootstrap
     cb1 = Callback("n1")
-    n0_id = await n0.net().node_id()
-    n0_addr = await n0.net().node_addr()
-    await n1.net().add_node_addr(n0_addr)
-
     print("subscribe n1")
     sink1 = await n1.gossip().subscribe(topic, [n0_id], cb1)
 
-    # Wait for n1 to show up for n0
+    # Wait for n0 to see n1 as a neighbor
     while (True):
-        event = await cb0.chan.get()
-        print("<<", event.type())
-        if (event.type() == MessageType.JOINED):
+        event = await asyncio.wait_for(cb0.chan.get(), timeout=10.0)
+        print("n0 <<", event.type())
+        if (event.type() == MessageType.NEIGHBOR_UP):
             break
 
-    # Broadcact message from node 0
+    # Give gossip time to establish
+    await asyncio.sleep(0.5)
+
+    # Broadcast message from node 0
     print("broadcasting message")
     msg_content = bytearray("hello".encode("utf-8"))
-
     await sink0.broadcast(msg_content)
 
-    # Wait for message on n1
-    found = False
-
     # Wait for the message on node 1
+    found = False
     while (True):
-        event = await cb1.chan.get()
+        event = await asyncio.wait_for(cb1.chan.get(), timeout=10.0)
+        print("n1 <<", event.type())
         if (event.type() == MessageType.RECEIVED):
             msg = event.as_received()
             assert msg.content == msg_content

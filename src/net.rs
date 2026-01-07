@@ -1,73 +1,62 @@
-use futures::TryStreamExt;
+use std::sync::Arc;
+use std::time::Duration;
 
-use crate::{Iroh, IrohError, NodeAddr, PublicKey, RemoteInfo};
+use iroh::discovery::static_provider::StaticProvider;
+
+use crate::{Iroh, IrohError, NodeAddr, PublicKey};
 
 /// Iroh net client.
-#[derive(uniffi::Object)]
+#[derive(uniffi::Object, Clone)]
 pub struct Net {
-    client: NetClient,
+    endpoint: iroh::Endpoint,
+    static_provider: StaticProvider,
 }
 
 #[uniffi::export]
 impl Iroh {
-    /// Access to blob specific funtionaliy.
+    /// Access to network specific functionality.
     pub fn net(&self) -> Net {
-        let client = self.client.clone().boxed();
-        let client = iroh_node_util::rpc::client::net::Client::new(client);
-
-        Net { client }
+        Net {
+            endpoint: self.router.endpoint().clone(),
+            static_provider: self.static_provider.clone(),
+        }
     }
 }
-
-type NetClient = iroh_node_util::rpc::client::net::Client;
 
 #[uniffi::export]
 impl Net {
     /// The string representation of the PublicKey of this node.
-    pub async fn node_id(&self) -> Result<String, IrohError> {
-        let id = self.client.node_id().await?;
-        Ok(id.to_string())
+    pub fn node_id(&self) -> String {
+        self.endpoint.id().to_string()
     }
 
     /// Return the [`NodeAddr`] for this node.
-    pub async fn node_addr(&self) -> Result<NodeAddr, IrohError> {
-        let addr = self.client.node_addr().await?;
-        Ok(addr.into())
+    pub fn node_addr(&self) -> NodeAddr {
+        self.endpoint.addr().into()
     }
 
-    /// Add a known node address to the node.
-    pub async fn add_node_addr(&self, addr: &NodeAddr) -> Result<(), IrohError> {
-        self.client.add_node_addr(addr.clone().try_into()?).await?;
+    /// Wait for the endpoint to be online (connected to relay and has direct addresses).
+    #[uniffi::method(async_runtime = "tokio")]
+    pub async fn wait_online(&self) -> Result<(), IrohError> {
+        self.endpoint.online().await;
         Ok(())
     }
 
-    /// Get the relay server we are connected to.
-    pub async fn home_relay(&self) -> Result<Option<String>, IrohError> {
-        let relay = self.client.home_relay().await?;
-        Ok(relay.map(|u| u.to_string()))
+    /// Get the latency to a specific node, if we have connection info for it.
+    pub fn latency(&self, node_id: &PublicKey) -> Option<Duration> {
+        let id: iroh::PublicKey = node_id.into();
+        self.endpoint.latency(id)
     }
 
-    /// Return `ConnectionInfo`s for each connection we have to another iroh node.
-    #[uniffi::method(async_runtime = "tokio")]
-    pub async fn remote_info_list(&self) -> Result<Vec<RemoteInfo>, IrohError> {
-        let infos = self
-            .client
-            .remote_info_iter()
-            .await?
-            .map_ok(|info| info.into())
-            .try_collect::<Vec<_>>()
-            .await?;
-        Ok(infos)
-    }
-
-    /// Return connection information on the currently running node.
-    #[uniffi::method(async_runtime = "tokio")]
-    pub async fn remote_info(&self, node_id: &PublicKey) -> Result<Option<RemoteInfo>, IrohError> {
-        let info = self
-            .client
-            .remote_info(node_id.into())
-            .await
-            .map(|i| i.map(|i| i.into()))?;
-        Ok(info)
+    /// Add endpoint addressing information for out-of-band peer discovery.
+    ///
+    /// This is used to inform the node about peer addresses obtained through
+    /// some out-of-band mechanism (e.g., exchanged via gossip topic subscription,
+    /// QR codes, tickets, etc.). The StaticProvider will use this information
+    /// to help establish connections to the given peer.
+    pub fn add_node_addr(&self, node_addr: Arc<NodeAddr>) -> Result<(), IrohError> {
+        let endpoint_addr: iroh::EndpointAddr = (*node_addr).clone().try_into()?;
+        self.static_provider.add_endpoint_info(endpoint_addr);
+        Ok(())
     }
 }

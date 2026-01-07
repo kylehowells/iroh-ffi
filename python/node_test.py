@@ -105,11 +105,11 @@ async def test_custom_protocol():
     node_2 = await Iroh.memory_with_options(options)
 
     alpn = b"example/protocol/0"
-    node_addr = await node_1.net().node_addr()
+    node_addr = node_1.net().node_addr()
 
     endpoint = node_2.node().endpoint()
 
-    assert endpoint.node_id() == await node_2.net().node_id()
+    assert endpoint.node_id() == node_2.net().node_id()
 
     conn = await endpoint.connect(node_addr, alpn)
     remote = conn.remote_node_id()
