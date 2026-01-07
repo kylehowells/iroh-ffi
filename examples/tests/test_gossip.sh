@@ -1,14 +1,11 @@
 #!/bin/bash
 # Gossip messaging cross-language tests
 #
-# NOTE: Gossip demos use a different interface than blob/doc demos.
-# They share topic hex + node address instead of a single ticket.
-# These tests are DISABLED until the demos are updated to support tickets
-# or the test harness is updated to handle the multi-value sharing.
-#
-# For now, gossip interop has been manually verified (see todo.txt).
-#
 # Tests all 9 combinations of Rust/Python/Swift gossip communication
+#
+# Gossip demos use topic + node address sharing:
+#   Sender: creates topic, outputs TOPIC, NODE_ID, RELAY_URL
+#   Receiver: joins with TOPIC NODE_ID RELAY_URL
 
 set -e
 
@@ -27,42 +24,51 @@ test_gossip() {
     test_dir=$(create_test_dir "gossip-${sender_lang}-${receiver_lang}")
     local sender_log="$test_dir/sender.log"
     local receiver_log="$test_dir/receiver.log"
+    local sender_in="$test_dir/sender_in"
     local sender_pid=""
+    local receiver_pid=""
 
     # Unique test message
-    local test_msg="TestMessage_${sender_lang}_to_${receiver_lang}_$$"
+    local test_msg="GossipTest_${sender_lang}_${receiver_lang}_$$"
 
     # Cleanup function
     cleanup() {
+        exec 3>&- 2>/dev/null || true
         cleanup_process "$sender_pid"
+        cleanup_process "$receiver_pid"
+        rm -f "$sender_in"
         cleanup_test_dir "$test_dir"
     }
     trap cleanup EXIT
 
-    # Start sender (creates topic and waits)
+    # Create FIFO for sender stdin control
+    mkfifo "$sender_in"
+
+    # Start sender (creates topic, reads from FIFO)
     case "$sender_lang" in
         rust)
             cd "$PROJECT_ROOT"
-            # Send the test message after a delay, then quit
-            (sleep 10; echo "$test_msg"; sleep 5; echo "/quit") | timeout 45 cargo run --example gossip_chat -- send > "$sender_log" 2>&1 &
+            timeout 60 cargo run --example gossip_chat < "$sender_in" > "$sender_log" 2>&1 &
             sender_pid=$!
             ;;
         python)
             cd "$PROJECT_ROOT"
-            (sleep 10; echo "$test_msg"; sleep 5; echo "/quit") | PYTHONUNBUFFERED=1 timeout 45 $PYTHON_CMD examples/gossip_chat.py send > "$sender_log" 2>&1 &
+            PYTHONUNBUFFERED=1 timeout 60 $PYTHON_CMD examples/gossip_chat.py < "$sender_in" > "$sender_log" 2>&1 &
             sender_pid=$!
             ;;
         swift)
             cd "$PROJECT_ROOT/IrohLib"
-            (sleep 10; echo "$test_msg"; sleep 5; echo "/quit") | timeout 45 swift run GossipSender > "$sender_log" 2>&1 &
+            timeout 60 swift run GossipChat < "$sender_in" > "$sender_log" 2>&1 &
             sender_pid=$!
             ;;
     esac
 
-    # Wait for ticket (gossip tickets start with different prefix)
-    # Look for the "TICKET" marker in output
-    if ! wait_for_pattern "$sender_log" "TICKET" 30; then
-        log_fail "$test_name - Sender failed to produce ticket"
+    # Open FIFO for writing
+    exec 3>"$sender_in"
+
+    # Wait for sender to start and print topic/node info
+    if ! wait_for_pattern "$sender_log" "Share your node ID" 30; then
+        log_fail "$test_name - Sender failed to start"
         cat "$sender_log" 2>/dev/null || true
         fail_test "$test_name"
         trap - EXIT
@@ -70,18 +76,14 @@ test_gossip() {
         return 1
     fi
 
-    # Extract ticket - gossip tickets are longer alphanumeric strings
-    local ticket
-    ticket=$(grep -A1 "TICKET" "$sender_log" 2>/dev/null | grep -v "TICKET" | grep -v "^$" | head -1 | tr -d '[:space:]')
+    # Extract topic, node ID, and relay URL from sender output
+    local topic node_id relay_url
+    topic=$(grep "^Topic:" "$sender_log" 2>/dev/null | head -1 | awk '{print $2}')
+    node_id=$(grep "Share your node ID:" "$sender_log" 2>/dev/null | head -1 | awk '{print $5}')
+    relay_url=$(grep "Share your relay URL:" "$sender_log" 2>/dev/null | head -1 | awk '{print $5}')
 
-    if [ -z "$ticket" ]; then
-        # Try alternate extraction
-        ticket=$(grep -oE '[a-zA-Z0-9]{100,}' "$sender_log" 2>/dev/null | head -1)
-    fi
-
-    if [ -z "$ticket" ]; then
-        log_fail "$test_name - Could not extract ticket"
-        echo "Sender log:"
+    if [ -z "$topic" ] || [ -z "$node_id" ]; then
+        log_fail "$test_name - Could not extract topic/node info"
         cat "$sender_log" 2>/dev/null || true
         fail_test "$test_name"
         trap - EXIT
@@ -89,24 +91,67 @@ test_gossip() {
         return 1
     fi
 
-    # Start receiver
+    # Start receiver with topic, node_id, relay_url
     case "$receiver_lang" in
         rust)
             cd "$PROJECT_ROOT"
-            # Wait a bit then quit
-            (sleep 15; echo "/quit") | timeout 25 cargo run --example gossip_chat -- receive "$ticket" > "$receiver_log" 2>&1 || true
+            (sleep 25; echo "/quit") | \
+                timeout 35 cargo run --example gossip_chat -- "$topic" "$node_id" "$relay_url" > "$receiver_log" 2>&1 &
+            receiver_pid=$!
             ;;
         python)
             cd "$PROJECT_ROOT"
-            (sleep 15; echo "/quit") | PYTHONUNBUFFERED=1 timeout 25 $PYTHON_CMD examples/gossip_chat.py receive "$ticket" > "$receiver_log" 2>&1 || true
+            (sleep 25; echo "/quit") | \
+                PYTHONUNBUFFERED=1 timeout 35 $PYTHON_CMD examples/gossip_chat.py "$topic" "$node_id" "$relay_url" > "$receiver_log" 2>&1 &
+            receiver_pid=$!
             ;;
         swift)
             cd "$PROJECT_ROOT/IrohLib"
-            (sleep 15; echo "/quit") | timeout 25 swift run GossipReceiver "$ticket" > "$receiver_log" 2>&1 || true
+            (sleep 25; echo "/quit") | \
+                timeout 35 swift run GossipChat "$topic" "$node_id" "$relay_url" > "$receiver_log" 2>&1 &
+            receiver_pid=$!
             ;;
     esac
 
-    # Verify receiver got the message
+    # Wait for peers to connect
+    log_info "Waiting for peers to connect..."
+    local connected=0
+    for i in {1..20}; do
+        if grep -q "Peer connected\|NeighborUp\|peer_connected" "$sender_log" 2>/dev/null; then
+            connected=1
+            break
+        fi
+        sleep 1
+    done
+
+    if [ $connected -eq 0 ]; then
+        log_fail "$test_name - Peers did not connect"
+        echo "Sender log:"
+        tail -20 "$sender_log"
+        echo "Receiver log:"
+        tail -20 "$receiver_log"
+        fail_test "$test_name"
+        trap - EXIT
+        cleanup
+        return 1
+    fi
+
+    # Send the test message
+    log_info "Sending test message..."
+    echo "$test_msg" >&3
+
+    # Wait for message delivery
+    sleep 5
+
+    # Close sender
+    echo "/quit" >&3
+    exec 3>&-
+
+    # Wait for processes
+    wait $sender_pid 2>/dev/null || true
+    wait $receiver_pid 2>/dev/null || true
+
+    # Check if receiver got the message
     if grep -q "$test_msg" "$receiver_log" 2>/dev/null; then
         pass_test "$test_name"
         trap - EXIT
@@ -115,10 +160,9 @@ test_gossip() {
     else
         log_fail "$test_name - Message not received"
         echo "Expected message: $test_msg"
-        echo "Receiver output:"
-        cat "$receiver_log" 2>/dev/null || echo "(no output)"
-        echo "Sender output:"
-        cat "$sender_log" 2>/dev/null || echo "(no output)"
+        echo ""
+        echo "Receiver output (last 30 lines):"
+        tail -30 "$receiver_log" 2>/dev/null || echo "(no output)"
         fail_test "$test_name"
         trap - EXIT
         cleanup
@@ -132,23 +176,40 @@ main() {
     echo "Gossip Messaging Cross-Language Tests"
     echo "=========================================="
     echo ""
-    echo -e "${YELLOW}NOTE: Gossip automated tests are currently disabled.${NC}"
-    echo "Gossip demos use topic hex + node address sharing instead of tickets,"
-    echo "which requires a different test approach."
+
+    # Check prerequisites
+    log_info "Checking prerequisites..."
+
+    PYTHON_CMD=$(check_python) || {
+        log_skip "Python not available"
+        PYTHON_CMD=""
+    }
+
+    # Build if needed
+    build_rust
+    build_swift
+
     echo ""
-    echo "Gossip interop has been manually verified - see todo.txt for details."
+    log_info "Running gossip messaging tests..."
     echo ""
 
-    # Skip all tests with explanation
+    # All language combinations
     local languages=("rust" "python" "swift")
+
     for sender in "${languages[@]}"; do
         for receiver in "${languages[@]}"; do
-            skip_test "$(lang_name $sender) → $(lang_name $receiver) (gossip tests disabled - manual verification done)"
+            # Skip if Python not available
+            if [ -z "$PYTHON_CMD" ] && { [ "$sender" = "python" ] || [ "$receiver" = "python" ]; }; then
+                skip_test "$(lang_name $sender) → $(lang_name $receiver) (Python not available)"
+                continue
+            fi
+
+            test_gossip "$sender" "$receiver" || true
+            echo ""
         done
     done
 
     print_summary
-    return 0  # Return success since skipping is intentional
 }
 
 main "$@"
