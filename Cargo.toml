@@ -14,7 +14,8 @@ documentation = "https://iroh.computer/docs"
 rust-version = "1.85"
 
 [workspace]
-# Temporarily disabled during 0.95 migration
+# iroh-js migration to 0.95 requires significant rewrite of blob.rs, doc.rs, etc.
+# The RPC client APIs have been completely removed in favor of direct API access
 # members = ["iroh-js"]
 
 [package.metadata.maturin]
@@ -31,6 +32,14 @@ path = "uniffi-bindgen.rs"
 [[example]]
 name = "gossip_chat"
 path = "examples/gossip_chat.rs"
+
+[[example]]
+name = "blob_demo"
+path = "examples/blob_demo.rs"
+
+[[example]]
+name = "doc_demo"
+path = "examples/doc_demo.rs"
 
 [dependencies]
 anyhow = "1.0.95"

@@ -23,6 +23,12 @@ let package = Package(
         .executable(
             name: "sender-swift5",
             targets: ["GossipSenderSwift5"]),
+        .executable(
+            name: "BlobDemo",
+            targets: ["BlobDemo"]),
+        .executable(
+            name: "DocDemo",
+            targets: ["DocDemo"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.0"),
@@ -78,6 +84,22 @@ let package = Package(
                 "IrohLib",
             ],
             path: "Sources/GossipSenderSwift5",
+            linkerSettings: [
+              .linkedFramework("SystemConfiguration"),
+              .linkedFramework("Security")
+            ]),
+        .executableTarget(
+            name: "BlobDemo",
+            dependencies: ["IrohLib"],
+            path: "Sources/BlobDemo",
+            linkerSettings: [
+              .linkedFramework("SystemConfiguration"),
+              .linkedFramework("Security")
+            ]),
+        .executableTarget(
+            name: "DocDemo",
+            dependencies: ["IrohLib"],
+            path: "Sources/DocDemo",
             linkerSettings: [
               .linkedFramework("SystemConfiguration"),
               .linkedFramework("Security")
