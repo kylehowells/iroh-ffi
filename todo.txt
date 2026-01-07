@@ -201,9 +201,183 @@ Another existing, known working iroh gossip demo project has a project setup to 
     - Communicate with instances in other languages ✓
     - Communicate with external GossipDemo project (iroh 0.95) ✓
 
-STATUS: ALL PHASES COMPLETE - FULL SUCCESS
+STATUS: GOSSIP COMPLETE - CONTINUING WITH BLOBS, DOCS, AND NODE.JS
+
+## Phase 7: Blob Storage Cross-Language Testing
+-----------------------------------------------
+
+Reference projects:
+- `/Users/kylehowells/Developer/Example-Projects/iroh-blobs`
+- `/Users/kylehowells/Developer/Example-Projects/iroh-examples`
+- `/Users/kylehowells/Developer/Example-Projects/sendme`
+
+[ ] 38. Create Rust blob demo app
+    - Add blob to store, get hash
+    - Export blob to file
+    - Create blob ticket for sharing
+
+[ ] 39. Create Python blob demo app
+    - Mirror Rust demo functionality
+    - Test add/export/ticket operations
+
+[ ] 40. Create Swift blob demo app
+    - Mirror Rust demo functionality
+    - Test add/export/ticket operations
+
+[ ] 41. Test Rust ↔ Rust blob transfer
+    - Node A adds blob, creates ticket
+    - Node B downloads blob using ticket
+    - Verify content hash matches
+
+[ ] 42. Test Rust ↔ Python blob transfer
+    - Rust adds blob, Python downloads
+    - Python adds blob, Rust downloads
+
+[ ] 43. Test Rust ↔ Swift blob transfer
+    - Rust adds blob, Swift downloads
+    - Swift adds blob, Rust downloads
+
+[ ] 44. Test Python ↔ Swift blob transfer
+    - Python adds blob, Swift downloads
+    - Swift adds blob, Python downloads
+
+[ ] 45. Test blob transfer with external iroh-blobs example
+    - Reference: `/Users/kylehowells/Developer/Example-Projects/iroh-blobs`
+    - Verify FFI can interop with native iroh-blobs
+
+
+## Phase 8: Documents Cross-Language Testing
+--------------------------------------------
+
+Reference projects:
+- `/Users/kylehowells/Developer/Example-Projects/iroh-docs`
+- `/Users/kylehowells/Developer/Example-Projects/iroh-examples`
+
+[ ] 46. Create Rust document demo app
+    - Create document
+    - Set key-value entries
+    - Generate document ticket for sharing
+    - Subscribe to sync events
+
+[ ] 47. Create Python document demo app
+    - Mirror Rust demo functionality
+    - Test create/set/get/sync operations
+
+[ ] 48. Create Swift document demo app
+    - Mirror Rust demo functionality
+    - Test create/set/get/sync operations
+
+[ ] 49. Test Rust ↔ Rust document sync
+    - Node A creates doc, sets entries
+    - Node B joins via ticket
+    - Verify entries sync correctly
+    - Test bidirectional updates
+
+[ ] 50. Test Rust ↔ Python document sync
+    - Rust creates doc, Python joins and syncs
+    - Python creates doc, Rust joins and syncs
+    - Test concurrent updates
+
+[ ] 51. Test Rust ↔ Swift document sync
+    - Rust creates doc, Swift joins and syncs
+    - Swift creates doc, Rust joins and syncs
+    - Test concurrent updates
+
+[ ] 52. Test Python ↔ Swift document sync
+    - Python creates doc, Swift joins and syncs
+    - Swift creates doc, Python joins and syncs
+
+[ ] 53. Test document sync with external iroh-docs example
+    - Reference: `/Users/kylehowells/Developer/Example-Projects/iroh-docs`
+    - Verify FFI can interop with native iroh-docs
+
+
+## Phase 9: Node.js Library Migration
+-------------------------------------
+
+The iroh-js library in `iroh-js/` needs to be updated to work with iroh 0.95.
+
+[ ] 54. Review iroh-js current state
+    - Check Cargo.toml dependencies
+    - Review src/*.rs files for API changes needed
+    - Note: Was disabled in workspace during migration
+
+[ ] 55. Update iroh-js Cargo.toml
+    - Update to iroh 0.95 ecosystem dependencies
+    - Match main Cargo.toml dependency versions
+
+[ ] 56. Fix iroh-js/src/node.rs
+    - Apply same fixes as main src/node.rs
+    - Update to new API patterns
+
+[ ] 57. Fix iroh-js/src/blob.rs
+    - Apply same fixes as main src/blob.rs
+
+[ ] 58. Fix iroh-js/src/doc.rs
+    - Apply same fixes as main src/doc.rs
+
+[ ] 59. Fix iroh-js/src/gossip.rs
+    - Apply same fixes as main src/gossip.rs
+
+[ ] 60. Fix remaining iroh-js source files
+    - endpoint.rs, net.rs, key.rs, author.rs, tag.rs, ticket.rs
+
+[ ] 61. Build iroh-js successfully
+    - Re-enable in workspace
+    - cargo build -p iroh-js
+
+[ ] 62. Run iroh-js tests
+    - npm test or yarn test
+    - Fix any failing tests
+
+[ ] 63. Test Node.js ↔ Rust gossip communication
+    - Node.js sender → Rust receiver
+    - Rust sender → Node.js receiver
+
+[ ] 64. Test Node.js ↔ Python gossip communication
+    - Node.js sender → Python receiver
+    - Python sender → Node.js receiver
+
+[ ] 65. Test Node.js ↔ Swift gossip communication
+    - Node.js sender → Swift receiver
+    - Swift sender → Node.js receiver
+
+[ ] 66. Test Node.js blob operations
+    - Add blob, create ticket
+    - Download blob from Rust/Python/Swift node
+
+[ ] 67. Test Node.js document operations
+    - Create doc, share ticket
+    - Sync with Rust/Python/Swift node
+
+
+## Phase 10: Final Integration Testing
+--------------------------------------
+
+[ ] 68. Full 4-way gossip test (Rust, Python, Swift, Node.js)
+    - All four languages in same gossip topic
+    - Verify all receive messages from all others
+
+[ ] 69. Full 4-way blob transfer test
+    - Each language adds a blob
+    - All others download it successfully
+
+[ ] 70. Full 4-way document sync test
+    - Create shared document
+    - All four languages join and sync
+    - Verify eventual consistency
+
+
+## Success Criteria (Updated)
+-----------------------------
+
+[x] Gossip: All languages can communicate ✓
+[ ] Blobs: All languages can transfer blobs
+[ ] Docs: All languages can sync documents
+[ ] Node.js: Fully migrated and tested
+[ ] Integration: Full 4-way interop verified
 
 ---
 Last Updated: 2026-01-07
-Current Phase: ALL PHASES COMPLETE
-Final Status: Migration from iroh 0.35 → 0.95 successful with full cross-language and external compatibility
+Current Phase: Phase 7 (Blob Storage Testing)
+Status: Gossip complete, continuing with Blobs, Docs, and Node.js migration
