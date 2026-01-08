@@ -1,3 +1,26 @@
+## Current Status & Future Plans
+
+**Important:** The official iroh team has [paused FFI updates](https://www.iroh.computer/blog/ffi-updates) while focusing on iroh 1.0. Their long-term plan is to provide **native implementations** for each language once iroh reaches 1.0 (expected early 2026), which will offer better performance and developer experience than FFI bindings.
+
+### The Problem
+
+The existing published packages (Swift on CocoaPods/SwiftPM, Python on PyPI) are based on older iroh versions and **cannot connect to applications using the current iroh Rust library**. The iroh protocol has evolved significantly, making the old bindings incompatible.
+
+### This Fork
+
+This repository provides **updated FFI bindings for iroh 0.95** that work today:
+
+- **Python**: Working bindings via maturin
+- **Swift**: Working bindings via SwiftPM/XCFramework
+
+All language combinations (Rust, Python, Swift) have been tested and verified to communicate with each other. See [examples/README.md](examples/README.md) for interoperability test results.
+
+### What's Next
+
+Once the iroh team releases native implementations after 1.0, this FFI approach will no longer be needed. Until then, this repo provides a working solution for Python and Swift developers who need to use iroh today.
+
+---
+
 # iroh-ffi
 
 > Foreign Function Interface (FFI) bindings for Iroh
