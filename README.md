@@ -17,7 +17,19 @@ All language combinations (Rust, Python, Swift) have been tested and verified to
 
 ### What's Next
 
-Once the iroh team releases native implementations after 1.0, this FFI approach will no longer be needed. Until then, this repo provides a working solution for Python and Swift developers who need to use iroh today.
+Once the iroh team releases native implementations after 1.0, this FFI approach will no longer be needed.
+
+### In the Mean Time
+
+Until native implementations arrive, I've set up working demos for all three protocols across Rust, Python, and Swift:
+
+| Protocol | Rust | Python | Swift | Description |
+|----------|:----:|:------:|:-----:|-------------|
+| **Gossip** | ✅ | ✅ | ✅ | Peer-to-peer messaging over shared topics |
+| **Blobs** | ✅ | ✅ | ✅ | Content-addressed binary data transfer |
+| **Docs** | ✅ | ✅ | ✅ | Collaborative document sync (CRDT) |
+
+All 27 cross-language combinations have been tested and verified working. See [examples/](examples/) for demo applications and [examples/tests/](examples/tests/) for automated integration tests.
 
 ---
 
