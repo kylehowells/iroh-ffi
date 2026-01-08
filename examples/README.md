@@ -129,7 +129,19 @@ All demos support interactive mode after initialization:
 
 ## Automated Testing
 
-The `tests/` directory contains automated cross-language integration tests:
+The `tests/` directory contains automated cross-language integration tests that verify all 27 protocol combinations work correctly.
+
+### Test Results Summary
+
+| Test Suite | Tests | Status |
+|------------|:-----:|:------:|
+| Gossip Messaging | 9 | ✅ All Pass |
+| Blob Transfer | 9 | ✅ All Pass |
+| Document Sync | 9 | ✅ All Pass |
+| Swift File Sync | 3 | ✅ All Pass |
+| **Total** | **30** | ✅ **All Pass** |
+
+### Running Tests
 
 ```bash
 # Run all tests
@@ -157,4 +169,4 @@ These demos are also compatible with native iroh applications using iroh 0.95:
 
 ## Verification Date
 
-Last verified: 2026-01-07
+Last verified: 2026-01-08
