@@ -2613,8 +2613,6 @@ public protocol BlobsProtocol: AnyObject {
 
     /**
      * List all collections.
-     *
-     * Note: Collections API has changed significantly - this is a stub
      */
     func listCollections() async throws -> [CollectionInfo]
 
@@ -2942,8 +2940,6 @@ open class Blobs:
 
     /**
      * List all collections.
-     *
-     * Note: Collections API has changed significantly - this is a stub
      */
     open func listCollections() async throws -> [CollectionInfo] {
         return
@@ -16655,7 +16651,7 @@ private var initializationResult: InitializationResult = {
     if uniffi_iroh_ffi_checksum_method_blobs_list() != 9714 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_iroh_ffi_checksum_method_blobs_list_collections() != 36508 {
+    if uniffi_iroh_ffi_checksum_method_blobs_list_collections() != 17443 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_iroh_ffi_checksum_method_blobs_list_incomplete() != 31740 {
