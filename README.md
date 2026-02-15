@@ -8,7 +8,7 @@ The existing published packages (Swift on CocoaPods/SwiftPM, Python on PyPI) are
 
 ### This Fork
 
-This repository provides **updated FFI bindings for iroh 0.95** that work today:
+This repository provides **updated FFI bindings for iroh 0.96** that work today:
 
 - **Python**: Working bindings via maturin
 - **Swift**: Working bindings via SwiftPM/XCFramework

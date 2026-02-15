@@ -153,26 +153,76 @@ impl Blobs {
     ) -> Result<(), IrohError> {
         use iroh_blobs::api::blobs::{AddPathOptions, ImportMode};
         let import_mode = if in_place { ImportMode::TryReference } else { ImportMode::Copy };
+        let path_buf = PathBuf::from(&path);
 
-        let progress = self.store.blobs().add_path_with_opts(AddPathOptions {
-            path: path.clone().into(),
-            mode: import_mode,
-            format: iroh_blobs::BlobFormat::Raw, // Simplified - wrap option handling would need more work
-        });
+        if path_buf.is_dir() {
+            // For directories, add each file and create a Collection
+            let mut collection = iroh_blobs::format::collection::Collection::default();
+            let mut entries: Vec<_> = std::fs::read_dir(&path_buf)
+                .map_err(|e| anyhow::anyhow!("{e}"))?
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().is_file())
+                .collect();
+            entries.sort_by_key(|e| e.file_name());
 
-        // Notify found
-        cb.progress(Arc::new(AddProgress::Found(AddProgressFound { id: 0, name: path, size: 0 }))).await?;
+            for (id, entry) in entries.iter().enumerate() {
+                let file_path = entry.path();
+                let file_name = entry.file_name().to_string_lossy().to_string();
 
-        // Get the final result - the new API's AddProgress is a future
-        let tag_info = progress.await
-            .map_err(|e| anyhow::anyhow!("{e}"))?;
+                cb.progress(Arc::new(AddProgress::Found(AddProgressFound {
+                    id: id as u64,
+                    name: file_name.clone(),
+                    size: entry.metadata().map(|m| m.len()).unwrap_or(0),
+                }))).await?;
 
-        // Notify completion
-        cb.progress(Arc::new(AddProgress::AllDone(AddProgressAllDone {
-            hash: Arc::new(Hash(tag_info.hash)),
-            tag: tag_info.name.0.to_vec(),
-            format: tag_info.format.into(),
-        }))).await?;
+                let tag_info = self.store.blobs().add_path_with_opts(AddPathOptions {
+                    path: file_path,
+                    mode: import_mode,
+                    format: iroh_blobs::BlobFormat::Raw,
+                }).await.map_err(|e| anyhow::anyhow!("{e}"))?;
+
+                cb.progress(Arc::new(AddProgress::Done(AddProgressDone {
+                    id: id as u64,
+                    hash: Arc::new(Hash(tag_info.hash)),
+                }))).await?;
+
+                collection.push(file_name, tag_info.hash);
+            }
+
+            // Store the collection
+            let temp_tag = collection.store(&self.store).await
+                .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+            // Persist with an auto-generated tag
+            let hash = temp_tag.hash();
+            let haf = temp_tag.hash_and_format();
+            let tag = self.store.tags().create(haf).await
+                .map_err(|e| anyhow::anyhow!("{e}"))?;
+            drop(temp_tag);
+
+            cb.progress(Arc::new(AddProgress::AllDone(AddProgressAllDone {
+                hash: Arc::new(Hash(hash)),
+                tag: tag.0.to_vec(),
+                format: BlobFormat::HashSeq,
+            }))).await?;
+        } else {
+            // Single file
+            cb.progress(Arc::new(AddProgress::Found(AddProgressFound {
+                id: 0, name: path.clone(), size: 0,
+            }))).await?;
+
+            let tag_info = self.store.blobs().add_path_with_opts(AddPathOptions {
+                path: path_buf,
+                mode: import_mode,
+                format: iroh_blobs::BlobFormat::Raw,
+            }).await.map_err(|e| anyhow::anyhow!("{e}"))?;
+
+            cb.progress(Arc::new(AddProgress::AllDone(AddProgressAllDone {
+                hash: Arc::new(Hash(tag_info.hash)),
+                tag: tag_info.name.0.to_vec(),
+                format: tag_info.format.into(),
+            }))).await?;
+        }
 
         Ok(())
     }
@@ -333,13 +383,35 @@ impl Blobs {
     }
 
     /// List all collections.
-    ///
-    /// Note: Collections API has changed significantly - this is a stub
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn list_collections(&self) -> Result<Vec<CollectionInfo>, IrohError> {
-        // Collections listing has been removed from the direct API
-        // Would need to iterate tags and check formats
-        Ok(Vec::new())
+        let tags: Vec<_> = self.store.tags().list().await
+            .map_err(|e| anyhow::anyhow!("{e}"))?
+            .try_collect()
+            .await
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+
+        let mut collections = Vec::new();
+        for tag_info in tags {
+            if tag_info.format == iroh_blobs::BlobFormat::HashSeq {
+                // Try to load as a collection to get blob count
+                let (total_blobs_count, total_blobs_size) =
+                    match iroh_blobs::format::collection::Collection::load(tag_info.hash, &self.store).await {
+                        Ok(col) => {
+                            // Count = collection children + 1 for the collection blob itself
+                            (Some(col.len() as u64 + 1), None)
+                        }
+                        Err(_) => (None, None),
+                    };
+                collections.push(CollectionInfo {
+                    tag: tag_info.name.0.to_vec(),
+                    hash: Arc::new(Hash(tag_info.hash)),
+                    total_blobs_count,
+                    total_blobs_size,
+                });
+            }
+        }
+        Ok(collections)
     }
 
     /// Read the content of a collection
@@ -1507,15 +1579,15 @@ mod tests {
 
     #[test]
     fn test_hash() {
-        let hash_str = "6vp273v6cqbbq7xesa2xfrdt3oajykgeifprn3pj4p6y76654amq";
+        // In iroh-blobs 0.98, Hash::Display changed from base32 to hex format
         let hex_str = "f55fafeebe1402187ee4903572c473db809c28c4415f16ede9e3fd8ffbdde019";
         let bytes = b"\xf5\x5f\xaf\xee\xbe\x14\x02\x18\x7e\xe4\x90\x35\x72\xc4\x73\xdb\x80\x9c\x28\xc4\x41\x5f\x16\xed\xe9\xe3\xfd\x8f\xfb\xdd\xe0\x19".to_vec();
 
-        // create hash from string
-        let hash = Hash::from_string(hash_str.into()).unwrap();
+        // create hash from string (now uses hex format)
+        let hash = Hash::from_string(hex_str.into()).unwrap();
 
         // test methods are as expected
-        assert_eq!(hash_str.to_string(), hash.to_string());
+        assert_eq!(hex_str.to_string(), hash.to_string());
         assert_eq!(bytes.to_vec(), hash.to_bytes());
         assert_eq!(hex_str.to_string(), hash.to_hex());
 
@@ -1523,7 +1595,7 @@ mod tests {
         let hash_0 = Hash::from_bytes(bytes.clone()).unwrap();
 
         // test methods are as expected
-        assert_eq!(hash_str.to_string(), hash_0.to_string());
+        assert_eq!(hex_str.to_string(), hash_0.to_string());
         assert_eq!(bytes, hash_0.to_bytes());
         assert_eq!(hex_str.to_string(), hash_0.to_hex());
 

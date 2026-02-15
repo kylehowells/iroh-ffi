@@ -971,66 +971,6 @@ void uniffi_iroh_ffi_fn_method_connection_set_receive_window(void*_Nonnull ptr, 
 uint64_t uniffi_iroh_ffi_fn_method_connection_stable_id(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_CLONE_CONNECTIONTYPE
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_CLONE_CONNECTIONTYPE
-void*_Nonnull uniffi_iroh_ffi_fn_clone_connectiontype(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_FREE_CONNECTIONTYPE
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_FREE_CONNECTIONTYPE
-void uniffi_iroh_ffi_fn_free_connectiontype(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_CONNECTIONTYPE_AS_DIRECT
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_CONNECTIONTYPE_AS_DIRECT
-RustBuffer uniffi_iroh_ffi_fn_method_connectiontype_as_direct(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_CONNECTIONTYPE_AS_MIXED
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_CONNECTIONTYPE_AS_MIXED
-RustBuffer uniffi_iroh_ffi_fn_method_connectiontype_as_mixed(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_CONNECTIONTYPE_AS_RELAY
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_CONNECTIONTYPE_AS_RELAY
-RustBuffer uniffi_iroh_ffi_fn_method_connectiontype_as_relay(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_CONNECTIONTYPE_TYPE
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_CONNECTIONTYPE_TYPE
-RustBuffer uniffi_iroh_ffi_fn_method_connectiontype_type(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_CLONE_DIRECTADDRINFO
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_CLONE_DIRECTADDRINFO
-void*_Nonnull uniffi_iroh_ffi_fn_clone_directaddrinfo(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_FREE_DIRECTADDRINFO
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_FREE_DIRECTADDRINFO
-void uniffi_iroh_ffi_fn_free_directaddrinfo(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_DIRECTADDRINFO_ADDR
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_DIRECTADDRINFO_ADDR
-RustBuffer uniffi_iroh_ffi_fn_method_directaddrinfo_addr(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_DIRECTADDRINFO_LAST_CONTROL
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_DIRECTADDRINFO_LAST_CONTROL
-RustBuffer uniffi_iroh_ffi_fn_method_directaddrinfo_last_control(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_DIRECTADDRINFO_LAST_PAYLOAD
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_DIRECTADDRINFO_LAST_PAYLOAD
-RustBuffer uniffi_iroh_ffi_fn_method_directaddrinfo_last_payload(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_DIRECTADDRINFO_LATENCY
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_DIRECTADDRINFO_LATENCY
-RustBuffer uniffi_iroh_ffi_fn_method_directaddrinfo_latency(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_CLONE_DOC
 #define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_CLONE_DOC
 void*_Nonnull uniffi_iroh_ffi_fn_clone_doc(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
@@ -1747,11 +1687,6 @@ void uniffi_iroh_ffi_fn_free_net(void*_Nonnull ptr, RustCallStatus *_Nonnull out
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_ADD_NODE_ADDR
 #define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_ADD_NODE_ADDR
 void uniffi_iroh_ffi_fn_method_net_add_node_addr(void*_Nonnull ptr, void*_Nonnull node_addr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_LATENCY
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_LATENCY
-RustBuffer uniffi_iroh_ffi_fn_method_net_latency(void*_Nonnull ptr, void*_Nonnull node_id, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_FN_METHOD_NET_NODE_ADDR
@@ -2987,54 +2922,6 @@ uint16_t uniffi_iroh_ffi_checksum_method_connection_stable_id(void
     
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_CONNECTIONTYPE_AS_DIRECT
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_CONNECTIONTYPE_AS_DIRECT
-uint16_t uniffi_iroh_ffi_checksum_method_connectiontype_as_direct(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_CONNECTIONTYPE_AS_MIXED
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_CONNECTIONTYPE_AS_MIXED
-uint16_t uniffi_iroh_ffi_checksum_method_connectiontype_as_mixed(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_CONNECTIONTYPE_AS_RELAY
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_CONNECTIONTYPE_AS_RELAY
-uint16_t uniffi_iroh_ffi_checksum_method_connectiontype_as_relay(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_CONNECTIONTYPE_TYPE
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_CONNECTIONTYPE_TYPE
-uint16_t uniffi_iroh_ffi_checksum_method_connectiontype_type(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_DIRECTADDRINFO_ADDR
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_DIRECTADDRINFO_ADDR
-uint16_t uniffi_iroh_ffi_checksum_method_directaddrinfo_addr(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_DIRECTADDRINFO_LAST_CONTROL
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_DIRECTADDRINFO_LAST_CONTROL
-uint16_t uniffi_iroh_ffi_checksum_method_directaddrinfo_last_control(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_DIRECTADDRINFO_LAST_PAYLOAD
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_DIRECTADDRINFO_LAST_PAYLOAD
-uint16_t uniffi_iroh_ffi_checksum_method_directaddrinfo_last_payload(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_DIRECTADDRINFO_LATENCY
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_DIRECTADDRINFO_LATENCY
-uint16_t uniffi_iroh_ffi_checksum_method_directaddrinfo_latency(void
-    
-);
-#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_DOC_CLOSE_ME
 #define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_DOC_CLOSE_ME
 uint16_t uniffi_iroh_ffi_checksum_method_doc_close_me(void
@@ -3512,12 +3399,6 @@ uint16_t uniffi_iroh_ffi_checksum_method_message_type(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NET_ADD_NODE_ADDR
 #define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NET_ADD_NODE_ADDR
 uint16_t uniffi_iroh_ffi_checksum_method_net_add_node_addr(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NET_LATENCY
-#define UNIFFI_FFIDEF_UNIFFI_IROH_FFI_CHECKSUM_METHOD_NET_LATENCY
-uint16_t uniffi_iroh_ffi_checksum_method_net_latency(void
     
 );
 #endif

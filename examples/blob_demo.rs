@@ -284,7 +284,7 @@ async fn receive_blob(
     println!("Blob hash: {}", hash);
     println!("Provider relay URL: {:?}", addr.relay_url());
 
-    // Add the node address to discovery for direct connection
+    // Add the node address to address lookup for direct connection
     node.net().add_node_addr(Arc::new((*addr).clone()))?;
 
     println!("\nDownloading blob...");

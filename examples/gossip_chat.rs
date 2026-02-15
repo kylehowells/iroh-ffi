@@ -109,13 +109,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Topic: {}", bytes_to_hex(&topic));
 
-    // If peer info provided, add it to discovery
+    // If peer info provided, add it to address lookup
     // Supports: TOPIC PEER_ID [RELAY_URL]
     let bootstrap: Vec<String> = if args.len() > 2 {
         let peer_node_id = &args[2];
         println!("Adding peer: {}...", &peer_node_id[..16.min(peer_node_id.len())]);
 
-        // If relay URL is also provided, add to StaticProvider for faster discovery
+        // If relay URL is also provided, add to MemoryLookup for faster connection
         if args.len() > 3 {
             let peer_relay_url = &args[3];
             let peer_pubkey = PublicKey::from_string(peer_node_id.clone())?;

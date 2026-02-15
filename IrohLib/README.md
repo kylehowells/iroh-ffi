@@ -269,7 +269,7 @@ blake3("chat") = 504c1dbb87fc1cd93594bd6baad1b520229bd222e16d9c48138998f602993c6
 ## Cross-Language Compatibility
 
 These Swift demos are fully compatible with:
-- Rust applications using `iroh` 0.95
+- Rust applications using `iroh` 0.96
 - Python applications using `iroh-ffi`
 - The [GossipDemo](https://github.com/example/GossipDemo) reference implementation
 
@@ -319,7 +319,7 @@ shasum -a 256 Iroh.xcframework.zip
 
 ### 2. Create GitHub release
 
-1. Create a new release on GitHub (e.g., `v0.95.0`)
+1. Create a new release on GitHub (e.g., `v0.96.0`)
 2. Attach `Iroh.xcframework.zip` to the release
 
 ### 3. Update Package.swift for binary distribution
@@ -335,7 +335,7 @@ Change the binary target from local path to URL:
 // After (remote URL - for distribution)
 .binaryTarget(
     name: "Iroh",
-    url: "https://github.com/kylehowells/iroh-ffi/releases/download/v0.95.0/Iroh.xcframework.zip",
+    url: "https://github.com/kylehowells/iroh-ffi/releases/download/v0.96.0/Iroh.xcframework.zip",
     checksum: "YOUR_SHA256_CHECKSUM_HERE")
 ```
 
@@ -343,8 +343,8 @@ Change the binary target from local path to URL:
 
 ```bash
 git add IrohLib/Package.swift
-git commit -m "Release v0.95.0 with binary xcframework"
-git tag v0.95.0
+git commit -m "Release v0.96.0 with binary xcframework"
+git tag v0.96.0
 git push origin main --tags
 ```
 
@@ -352,7 +352,7 @@ Now users can add IrohLib directly from GitHub:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/kylehowells/iroh-ffi", from: "0.95.0")
+    .package(url: "https://github.com/kylehowells/iroh-ffi", from: "0.96.0")
 ]
 ```
 
