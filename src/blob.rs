@@ -1507,15 +1507,15 @@ mod tests {
 
     #[test]
     fn test_hash() {
-        let hash_str = "6vp273v6cqbbq7xesa2xfrdt3oajykgeifprn3pj4p6y76654amq";
+        // In iroh-blobs 0.98, Hash::Display changed from base32 to hex format
         let hex_str = "f55fafeebe1402187ee4903572c473db809c28c4415f16ede9e3fd8ffbdde019";
         let bytes = b"\xf5\x5f\xaf\xee\xbe\x14\x02\x18\x7e\xe4\x90\x35\x72\xc4\x73\xdb\x80\x9c\x28\xc4\x41\x5f\x16\xed\xe9\xe3\xfd\x8f\xfb\xdd\xe0\x19".to_vec();
 
-        // create hash from string
-        let hash = Hash::from_string(hash_str.into()).unwrap();
+        // create hash from string (now uses hex format)
+        let hash = Hash::from_string(hex_str.into()).unwrap();
 
         // test methods are as expected
-        assert_eq!(hash_str.to_string(), hash.to_string());
+        assert_eq!(hex_str.to_string(), hash.to_string());
         assert_eq!(bytes.to_vec(), hash.to_bytes());
         assert_eq!(hex_str.to_string(), hash.to_hex());
 
@@ -1523,7 +1523,7 @@ mod tests {
         let hash_0 = Hash::from_bytes(bytes.clone()).unwrap();
 
         // test methods are as expected
-        assert_eq!(hash_str.to_string(), hash_0.to_string());
+        assert_eq!(hex_str.to_string(), hash_0.to_string());
         assert_eq!(bytes, hash_0.to_bytes());
         assert_eq!(hex_str.to_string(), hash_0.to_hex());
 

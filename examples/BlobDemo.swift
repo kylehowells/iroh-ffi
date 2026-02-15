@@ -160,7 +160,7 @@ func receiveBlob(node: Iroh, ticketStr: String, destPath: String) async throws {
     print("Blob hash: \(hashObj)")
     print("Provider relay URL: \(addr.relayUrl() ?? "none")")
 
-    // Add the node address to discovery for direct connection
+    // Add the node address to address lookup for direct connection
     try node.net().addNodeAddr(nodeAddr: addr)
 
     print("\nDownloading blob...")

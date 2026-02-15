@@ -162,11 +162,11 @@ The `tests/` directory contains automated cross-language integration tests that 
 
 ## External Compatibility
 
-These demos are also compatible with native iroh applications using iroh 0.95:
+These demos are also compatible with native iroh applications using iroh 0.96:
 
 - Tested with [iroh-blobs](https://github.com/n0-computer/iroh-blobs) examples
 - Tested with standalone iroh gossip applications
 
 ## Verification Date
 
-Last verified: 2026-01-08
+Last verified: 2026-02-15 (iroh 0.96)

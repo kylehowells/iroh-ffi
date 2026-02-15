@@ -691,3 +691,157 @@ let ticket = NodeTicket::from_str(&ticket_str)?;
 - [iroh 0.95.0 Release](https://www.iroh.computer/blog/iroh-0-95-0-new-relay)
 - [iroh-blobs on crates.io](https://crates.io/crates/iroh-blobs)
 - [iroh-docs on crates.io](https://crates.io/crates/iroh-docs)
+
+---
+
+# Iroh FFI Migration: 0.95 → 0.96
+
+**Date:** February 15, 2026
+**Previous Version:** 0.95.x
+**Target Version:** 0.96.x
+
+## Summary
+
+The 0.95 → 0.96 migration is a moderate update focused on API renaming and type removal. Unlike the 0.35 → 0.95 migration which required a fundamental architectural rewrite, this migration primarily involves:
+
+- Renaming the `discovery` module to `address_lookup`
+- Removing deprecated connection inspection types
+- Unifying bind address configuration
+- Hash display format change from base32 to hex (iroh-blobs 0.98)
+
+**Compilation Status:** Clean build, no errors or warnings
+**Test Results:** 14/17 pass (3 pre-existing blob test failures unrelated to migration)
+
+---
+
+## Version Compatibility Matrix (0.95 → 0.96)
+
+| Crate | Old Version | New Version | Notes |
+|-------|-------------|-------------|-------|
+| `iroh` | 0.95 | 0.96 | `discovery` → `address_lookup` rename |
+| `iroh-base` | 0.95 | 0.96 | Minor updates |
+| `iroh-blobs` | 0.97 | 0.98 | Hash display format changed to hex |
+| `iroh-docs` | 0.95 | 0.96 | Minor updates |
+| `iroh-gossip` | 0.95 | 0.96 | Minor updates |
+| `iroh-metrics` | 0.37 | 0.38 | Minor updates |
+| `iroh-tickets` | 0.2 | 0.3 | Minor updates |
+
+Feature flag added: `iroh = { version = "0.96", features = ["address-lookup-mdns"] }`
+
+---
+
+## Breaking Changes
+
+### 1. Discovery → AddressLookup Rename
+
+The entire `iroh::discovery` module was renamed to `iroh::address_lookup`:
+
+| Old (0.95) | New (0.96) |
+|------------|------------|
+| `iroh::discovery::static_provider::StaticProvider` | `iroh::address_lookup::MemoryLookup` |
+| `iroh::discovery::dns::DnsDiscovery` | `iroh::address_lookup::DnsAddressLookup` |
+| `iroh::discovery::pkarr::PkarrPublisher` | `iroh::address_lookup::PkarrPublisher` |
+| `builder.discovery(X)` | `builder.address_lookup(X)` |
+
+**Files affected:** `src/node.rs`, `src/net.rs`
+
+### 2. Bind Address Unification
+
+Separate IPv4/IPv6 bind methods were merged into a single method that returns `Result`:
+
+| Old (0.95) | New (0.96) |
+|------------|------------|
+| `builder.bind_addr_v4(addr.parse()?)` | `builder.bind_addr(SocketAddr::V4(addr.parse()?))?` |
+| `builder.bind_addr_v6(addr.parse()?)` | `builder.bind_addr(SocketAddr::V6(addr.parse()?))?` |
+
+**Files affected:** `src/node.rs`
+
+### 3. Removed Types
+
+The following connection inspection types were removed entirely in iroh 0.96:
+
+- `iroh::endpoint::DirectAddrInfo` — replaced by `TransportAddr` and `paths()` watcher
+- `iroh::endpoint::ConnectionType` — replaced by `TransportAddr`
+- `ConnType` (FFI enum)
+- `ConnectionTypeMixed` (FFI enum)
+- `RemoteInfo` (FFI record)
+- `LatencyAndControlMsg` (FFI record)
+
+**Resolution:** All FFI wrapper types and their `From` impls were removed from `src/node.rs`.
+
+### 4. Connection::rtt() API Change
+
+`Connection::rtt()` now requires a `PathId` parameter instead of being parameterless.
+
+**Resolution:** Rewrote `rtt()` to use the `paths()` watcher pattern:
+
+```rust
+pub fn rtt(&self) -> u64 {
+    use iroh::Watcher;
+    let paths = self.0.paths().get();
+    let mut rtt_ms = 0u64;
+    for path in paths.iter() {
+        if path.is_selected() {
+            rtt_ms = path.rtt().as_millis() as u64;
+            break;
+        }
+    }
+    rtt_ms
+}
+```
+
+**Files affected:** `src/endpoint.rs`
+
+### 5. Endpoint::latency() Removed
+
+`Endpoint::latency()` was removed in 0.96. Per-connection latency should use `Connection::rtt()` instead.
+
+**Resolution:** Removed `latency()` method from `Net` in `src/net.rs`.
+
+### 6. Hash Display Format Change (iroh-blobs 0.98)
+
+`Hash::Display` changed from base32 to hex format.
+
+**Resolution:** Updated `test_hash` in `src/blob.rs` to use hex string as primary format.
+
+---
+
+## Files Modified
+
+| File | Changes |
+|------|---------|
+| `Cargo.toml` | Version bumps for all iroh crates |
+| `src/node.rs` | Major: discovery→address_lookup, removed 6 types and their impls, bind_addr unification |
+| `src/net.rs` | Moderate: StaticProvider→MemoryLookup, removed latency() |
+| `src/endpoint.rs` | Minor: rtt() rewritten using paths() watcher |
+| `src/blob.rs` | Test fix: base32→hex format |
+| `examples/gossip_chat.rs` | Comment updates |
+| `examples/gossip_chat.py` | Comment updates |
+| `examples/GossipChat.swift` | Comment updates |
+| `examples/blob_demo.rs` | Comment updates |
+| `examples/blob_demo.py` | Comment updates |
+| `examples/BlobDemo.swift` | Comment updates |
+| `README.md` | Version reference 0.95→0.96 |
+| `examples/README.md` | Version reference 0.95→0.96 |
+| `IrohLib/README.md` | Version references 0.95→0.96 |
+
+## Binding Regeneration
+
+All language bindings were regenerated from the updated Rust code:
+
+| Language | Tool | Status |
+|----------|------|--------|
+| Python | `maturin develop` | ✅ Built and verified |
+| Swift | `uniffi-bindgen` + xcframework rebuild | ✅ Built and verified |
+| Kotlin | `uniffi-bindgen` (via `make_kotlin.sh`) | ✅ Generated (no Java runtime to build-verify) |
+| JavaScript | Deferred | ⏸️ At v0.35, requires full NAPI rewrite |
+
+## Pre-existing Issues (Not caused by migration)
+
+- `test_blobs_list_collections`: `add_from_path` simplified implementation returns `Error::Io` for directories
+- `test_list_and_delete`: GC not running because `gc_interval_millis` is unused (GC now configured at store level via `GcConfig`)
+
+## References
+
+- [iroh 0.96.0 Release](https://www.iroh.computer/blog/iroh-0-96-0-new-address-lookup)
+- [iroh-c-ffi reference implementation](https://github.com/example/iroh-c-ffi) (local at `/Users/kylehowells/Developer/Examples/iroh-c-ffi`)

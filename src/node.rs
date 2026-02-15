@@ -6,10 +6,10 @@ use iroh_blobs::{
 };
 use iroh_docs::protocol::Docs;
 use iroh_gossip::net::Gossip;
-use iroh::discovery::static_provider::StaticProvider;
+use iroh::address_lookup::{DnsAddressLookup, MemoryLookup, PkarrPublisher};
 
 use crate::{
-    BlobProvideEventCallback, CallbackError, Connection, Endpoint, IrohError, PublicKey,
+    BlobProvideEventCallback, CallbackError, Connection, Endpoint, IrohError,
 };
 
 /// Stats counter
@@ -21,165 +21,11 @@ pub struct CounterStats {
     pub description: String,
 }
 
-/// Information about a direct address.
-#[derive(Debug, Clone, uniffi::Object)]
-pub struct DirectAddrInfo(pub(crate) iroh::endpoint::DirectAddrInfo);
+// Note: DirectAddrInfo, ConnectionType, RemoteInfo, ConnType, LatencyAndControlMsg,
+// and ConnectionTypeMixed have been removed in iroh 0.96.
+// DirectAddrInfo and ConnectionType no longer exist in iroh::endpoint.
+// Use Connection::paths() with TransportAddr for connection path inspection instead.
 
-#[uniffi::export]
-impl DirectAddrInfo {
-    /// Get the reported address
-    pub fn addr(&self) -> String {
-        self.0.addr.to_string()
-    }
-
-    /// Get the reported latency, if it exists
-    pub fn latency(&self) -> Option<Duration> {
-        self.0.latency
-    }
-
-    /// Get the last control message received by this node
-    pub fn last_control(&self) -> Option<LatencyAndControlMsg> {
-        self.0
-            .last_control
-            .map(|(latency, control_msg)| LatencyAndControlMsg {
-                latency,
-                control_msg: control_msg.to_string(),
-            })
-    }
-
-    /// Get how long ago the last payload message was received for this node
-    pub fn last_payload(&self) -> Option<Duration> {
-        self.0.last_payload
-    }
-}
-
-/// The latency and type of the control message
-#[derive(Debug, uniffi::Record)]
-pub struct LatencyAndControlMsg {
-    /// The latency of the control message
-    pub latency: Duration,
-    /// The type of control message, represented as a string
-    pub control_msg: String,
-    // control_msg: ControlMsg
-}
-
-// TODO: enable and use for `LatencyAndControlMsg.control_msg` field when iroh core makes this public
-// The kinds of control messages that can be sent
-// pub use iroh::magicsock::ControlMsg;
-
-/// Information about a remote node
-#[derive(Debug, uniffi::Record)]
-pub struct RemoteInfo {
-    /// The node identifier of the endpoint. Also a public key.
-    pub node_id: Arc<PublicKey>,
-    /// Relay url, if available.
-    pub relay_url: Option<String>,
-    /// List of addresses at which this node might be reachable, plus any latency information we
-    /// have about that address and the last time the address was used.
-    pub addrs: Vec<Arc<DirectAddrInfo>>,
-    /// The type of connection we have to the peer, either direct or over relay.
-    pub conn_type: Arc<ConnectionType>,
-    /// The latency of the `conn_type`.
-    pub latency: Option<Duration>,
-    /// Duration since the last time this peer was used.
-    pub last_used: Option<Duration>,
-}
-
-// RemoteInfo has been removed in iroh 0.93+, keeping struct for FFI compatibility
-// but removing the From impl since iroh::endpoint::RemoteInfo no longer exists
-
-/// The type of the connection
-#[derive(Debug, uniffi::Enum)]
-pub enum ConnType {
-    /// Indicates you have a UDP connection.
-    Direct,
-    /// Indicates you have a relayed connection.
-    Relay,
-    /// Indicates you have an unverified UDP connection, and a relay connection for backup.
-    Mixed,
-    /// Indicates you have no proof of connection.
-    None,
-}
-
-/// The type of connection we have to the node
-#[derive(Debug, uniffi::Object)]
-pub enum ConnectionType {
-    /// Direct UDP connection
-    Direct(String),
-    /// Relay connection
-    Relay(String),
-    /// Both a UDP and a Relay connection are used.
-    ///
-    /// This is the case if we do have a UDP address, but are missing a recent confirmation that
-    /// the address works.
-    Mixed(String, String),
-    /// We have no verified connection to this PublicKey
-    None,
-}
-
-#[uniffi::export]
-impl ConnectionType {
-    /// Whether connection is direct, relay, mixed, or none
-    pub fn r#type(&self) -> ConnType {
-        match self {
-            ConnectionType::Direct(_) => ConnType::Direct,
-            ConnectionType::Relay(_) => ConnType::Relay,
-            ConnectionType::Mixed(..) => ConnType::Mixed,
-            ConnectionType::None => ConnType::None,
-        }
-    }
-
-    /// Return the socket address if this is a direct connection
-    pub fn as_direct(&self) -> String {
-        match self {
-            ConnectionType::Direct(addr) => addr.clone(),
-            _ => panic!("ConnectionType type is not 'Direct'"),
-        }
-    }
-
-    /// Return the derp url if this is a relay connection
-    pub fn as_relay(&self) -> String {
-        match self {
-            ConnectionType::Relay(url) => url.clone(),
-            _ => panic!("ConnectionType is not `Relay`"),
-        }
-    }
-
-    /// Return the socket address and DERP url if this is a mixed connection
-    pub fn as_mixed(&self) -> ConnectionTypeMixed {
-        match self {
-            ConnectionType::Mixed(addr, url) => ConnectionTypeMixed {
-                addr: addr.clone(),
-                relay_url: url.clone(),
-            },
-            _ => panic!("ConnectionType is not `Relay`"),
-        }
-    }
-}
-
-/// The socket address and url of the mixed connection
-#[derive(Debug, uniffi::Record)]
-pub struct ConnectionTypeMixed {
-    /// Address of the node
-    pub addr: String,
-    /// Url of the relay node to which the node is connected
-    pub relay_url: String,
-}
-
-impl From<iroh::endpoint::ConnectionType> for ConnectionType {
-    fn from(value: iroh::endpoint::ConnectionType) -> Self {
-        match value {
-            iroh::endpoint::ConnectionType::Direct(addr) => {
-                ConnectionType::Direct(addr.to_string())
-            }
-            iroh::endpoint::ConnectionType::Mixed(addr, url) => {
-                ConnectionType::Mixed(addr.to_string(), url.to_string())
-            }
-            iroh::endpoint::ConnectionType::Relay(url) => ConnectionType::Relay(url.to_string()),
-            iroh::endpoint::ConnectionType::None => ConnectionType::None,
-        }
-    }
-}
 /// Options passed to [`IrohNode.new`]. Controls the behaviour of an iroh node.
 #[derive(derive_more::Debug, uniffi::Record)]
 pub struct NodeOptions {
@@ -272,15 +118,6 @@ pub enum NodeDiscoveryConfig {
     ///
     /// - It uses an mDNS-like system to announce itself on the local network.
     ///
-    /// # Usage during tests
-    ///
-    /// Note that the default changes when compiling with `cfg(test)` or the `test-utils`
-    /// cargo feature from [iroh-net] is enabled.  In this case only the Pkarr/DNS service
-    /// is used, but on the `iroh.test` domain.  This domain is not integrated with the
-    /// global DNS network and thus node discovery is effectively disabled.  To use node
-    /// discovery in a test use the [`iroh_net::test_utils::DnsPkarrServer`] in the test and
-    /// configure it here as a custom discovery mechanism ([`DiscoveryConfig::Custom`]).
-    ///
     /// [number 0]: https://n0.computer
     #[default]
     Default,
@@ -293,7 +130,7 @@ pub struct Iroh {
     pub(crate) store: iroh_blobs::api::Store,
     pub(crate) docs: Option<iroh_docs::api::DocsApi>,
     pub(crate) gossip: Gossip,
-    pub(crate) static_provider: StaticProvider,
+    pub(crate) memory_lookup: MemoryLookup,
 }
 
 #[uniffi::export]
@@ -343,7 +180,7 @@ impl Iroh {
             .map_err(|err| anyhow::anyhow!(err))?;
         let store: iroh_blobs::api::Store = blobs_store.into();
 
-        let (builder, gossip, docs, static_provider) = apply_options(
+        let (builder, gossip, docs, memory_lookup) = apply_options(
             builder,
             options,
             store.clone(),
@@ -358,7 +195,7 @@ impl Iroh {
             store,
             docs,
             gossip,
-            static_provider,
+            memory_lookup,
         })
     }
 
@@ -378,7 +215,7 @@ impl Iroh {
         let blobs_store = iroh_blobs::store::mem::MemStore::default();
         let store: iroh_blobs::api::Store = blobs_store.into();
 
-        let (builder, gossip, docs, static_provider) = apply_options(
+        let (builder, gossip, docs, memory_lookup) = apply_options(
             builder,
             options,
             store.clone(),
@@ -393,7 +230,7 @@ impl Iroh {
             store,
             docs,
             gossip,
-            static_provider,
+            memory_lookup,
         })
     }
 
@@ -413,7 +250,7 @@ async fn apply_options(
     iroh::protocol::RouterBuilder,
     Gossip,
     Option<iroh_docs::api::DocsApi>,
-    StaticProvider,
+    MemoryLookup,
 )> {
     // Note: gc_period is currently unused - GC is now configured during store creation
     // via GcConfig in the store's Options struct
@@ -429,23 +266,25 @@ async fn apply_options(
     let blob_events = options.blob_events.map(|cb| BlobProvideEvents::new(cb).into());
 
     if let Some(addr) = options.ipv4_addr {
-        builder = builder.bind_addr_v4(addr.parse()?);
+        let addr: std::net::SocketAddrV4 = addr.parse()?;
+        builder = builder.bind_addr(std::net::SocketAddr::V4(addr))?;
     }
 
     if let Some(addr) = options.ipv6_addr {
-        builder = builder.bind_addr_v6(addr.parse()?);
+        let addr: std::net::SocketAddrV6 = addr.parse()?;
+        builder = builder.bind_addr(std::net::SocketAddr::V6(addr))?;
     }
 
-    // Create a StaticProvider for out-of-band peer discovery
-    let static_provider = StaticProvider::new();
+    // Create a MemoryLookup for out-of-band peer discovery
+    let memory_lookup = MemoryLookup::new();
 
     builder = match options.node_discovery {
-        Some(NodeDiscoveryConfig::None) => builder.discovery(static_provider.clone()),
+        Some(NodeDiscoveryConfig::None) => builder.address_lookup(memory_lookup.clone()),
         Some(NodeDiscoveryConfig::Default) | None => {
             builder
-                .discovery(iroh::discovery::dns::DnsDiscovery::n0_dns())
-                .discovery(iroh::discovery::pkarr::PkarrPublisher::n0_dns())
-                .discovery(static_provider.clone())
+                .address_lookup(DnsAddressLookup::n0_dns())
+                .address_lookup(PkarrPublisher::n0_dns())
+                .address_lookup(memory_lookup.clone())
         }
     };
 
@@ -501,7 +340,7 @@ async fn apply_options(
         }
     }
 
-    Ok((router_builder, gossip, docs, static_provider))
+    Ok((router_builder, gossip, docs, memory_lookup))
 }
 
 /// Iroh node client.
@@ -524,9 +363,6 @@ impl Node {
         Endpoint::new(self.router.endpoint().clone())
     }
 }
-
-// NodeStatus removed - was based on iroh_node_util which no longer exists
-// Status information can be obtained directly from the Endpoint
 
 #[derive(Clone)]
 struct BlobProvideEvents {

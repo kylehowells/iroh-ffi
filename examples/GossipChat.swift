@@ -100,14 +100,14 @@ struct GossipChat {
 
         print("Topic: \(bytesToHex(topic))")
 
-        // If peer info provided, add it to discovery
+        // If peer info provided, add it to address lookup
         // Supports: TOPIC PEER_ID [RELAY_URL]
         var bootstrap: [String] = []
         if args.count > 1 {
             let peerNodeId = args[1]
             print("Adding peer: \(String(peerNodeId.prefix(16)))...")
 
-            // If relay URL is also provided, add to StaticProvider for faster discovery
+            // If relay URL is also provided, add to MemoryLookup for faster connection
             if args.count > 2 {
                 let peerRelayUrl = args[2]
                 let peerPubkey = try PublicKey.fromString(s: peerNodeId)

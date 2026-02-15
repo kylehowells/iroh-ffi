@@ -167,7 +167,7 @@ async def receive_blob(node, ticket_str, dest_path):
     print(f"Blob hash: {hash_obj}")
     print(f"Provider relay URL: {addr.relay_url()}")
 
-    # Add the node address to discovery for direct connection
+    # Add the node address to address lookup for direct connection
     node.net().add_node_addr(addr)
 
     print("\nDownloading blob...")

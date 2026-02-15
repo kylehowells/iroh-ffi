@@ -164,9 +164,22 @@ impl Connection {
         id.to_string()
     }
 
+    /// Get the round-trip time to the peer in milliseconds.
+    /// Returns 0 if no selected path is available yet.
     #[uniffi::method]
     pub fn rtt(&self) -> u64 {
-        self.0.rtt().as_millis() as _
+        // In iroh 0.96, Connection::rtt() requires a PathId.
+        // Use paths() watcher to find the selected path's RTT instead.
+        use iroh::Watcher;
+        let paths = self.0.paths().get();
+        let mut rtt_ms = 0u64;
+        for path in paths.iter() {
+            if path.is_selected() {
+                rtt_ms = path.rtt().as_millis() as u64;
+                break;
+            }
+        }
+        rtt_ms
     }
 
     #[uniffi::method]
@@ -271,7 +284,7 @@ impl SendStream {
 
     #[uniffi::method(async_runtime = "tokio")]
     pub async fn stopped(&self) -> Result<Option<u64>, IrohError> {
-        let mut s = self.0.lock().await;
+        let s = self.0.lock().await;
         let res = s.stopped().await.map_err(anyhow::Error::from)?;
         let res = res.map(|r| r.into_inner());
         Ok(res)

@@ -1,15 +1,14 @@
 use std::sync::Arc;
-use std::time::Duration;
 
-use iroh::discovery::static_provider::StaticProvider;
+use iroh::address_lookup::MemoryLookup;
 
-use crate::{Iroh, IrohError, NodeAddr, PublicKey};
+use crate::{Iroh, IrohError, NodeAddr};
 
 /// Iroh net client.
 #[derive(uniffi::Object, Clone)]
 pub struct Net {
     endpoint: iroh::Endpoint,
-    static_provider: StaticProvider,
+    memory_lookup: MemoryLookup,
 }
 
 #[uniffi::export]
@@ -18,7 +17,7 @@ impl Iroh {
     pub fn net(&self) -> Net {
         Net {
             endpoint: self.router.endpoint().clone(),
-            static_provider: self.static_provider.clone(),
+            memory_lookup: self.memory_lookup.clone(),
         }
     }
 }
@@ -42,21 +41,18 @@ impl Net {
         Ok(())
     }
 
-    /// Get the latency to a specific node, if we have connection info for it.
-    pub fn latency(&self, node_id: &PublicKey) -> Option<Duration> {
-        let id: iroh::PublicKey = node_id.into();
-        self.endpoint.latency(id)
-    }
+    // Note: latency() has been removed in iroh 0.96.
+    // Use Connection::rtt() for per-connection latency instead.
 
     /// Add endpoint addressing information for out-of-band peer discovery.
     ///
     /// This is used to inform the node about peer addresses obtained through
     /// some out-of-band mechanism (e.g., exchanged via gossip topic subscription,
-    /// QR codes, tickets, etc.). The StaticProvider will use this information
+    /// QR codes, tickets, etc.). The MemoryLookup will use this information
     /// to help establish connections to the given peer.
     pub fn add_node_addr(&self, node_addr: Arc<NodeAddr>) -> Result<(), IrohError> {
         let endpoint_addr: iroh::EndpointAddr = (*node_addr).clone().try_into()?;
-        self.static_provider.add_endpoint_info(endpoint_addr);
+        self.memory_lookup.add_endpoint_info(endpoint_addr);
         Ok(())
     }
 }

@@ -96,14 +96,14 @@ async def main():
 
     print(f"Topic: {bytes_to_hex(topic)}")
 
-    # If peer info provided, add it to discovery
+    # If peer info provided, add it to address lookup
     # Supports: TOPIC PEER_ID [RELAY_URL]
     bootstrap = []
     if len(args) > 1:
         peer_node_id = args[1]
         print(f"Adding peer: {peer_node_id[:16]}...")
 
-        # If relay URL is also provided, add to StaticProvider for faster discovery
+        # If relay URL is also provided, add to MemoryLookup for faster connection
         if len(args) > 2:
             peer_relay_url = args[2]
             peer_pubkey = PublicKey.from_string(peer_node_id)
