@@ -10,7 +10,7 @@ let package = Package(
     products: [
         .library(
             name: "IrohLib",
-            targets: ["IrohLib", "Iroh"]),
+            targets: ["IrohLib"]),
         .executable(
             name: "GossipChat",
             targets: ["GossipChat"]),
@@ -37,14 +37,31 @@ let package = Package(
         .target(
             name: "IrohLib",
             dependencies: [
-                .byName(name: "Iroh")
+                .target(name: "IrohiOS", condition: .when(platforms: [.iOS])),
+                .target(name: "IrohMacOS", condition: .when(platforms: [.macOS])),
             ],
             linkerSettings: [
               .linkedFramework("SystemConfiguration")
             ]),
+
+        // Per-platform binary targets — SwiftPM only links the one matching your build platform.
+        // iOS (device + simulator): 177 MB download
         .binaryTarget(
-            name: "Iroh",
-            path: "artifacts/Iroh.xcframework"),
+            name: "IrohiOS",
+            url: "https://github.com/kylehowells/iroh-ffi/releases/download/v0.96.0/Iroh-ios.xcframework.zip",
+            checksum: "b0ccebc59f00ff3555a7c7b2cf41e8ad72747143a2de2a790ae9b5b31b9f3370"),
+        // macOS (Apple Silicon): 60 MB download
+        .binaryTarget(
+            name: "IrohMacOS",
+            url: "https://github.com/kylehowells/iroh-ffi/releases/download/v0.96.0/Iroh-macos.xcframework.zip",
+            checksum: "b807b305eac6728b8663d7b354fd571a5fbde6bb44b22e87c565fca03e0db8fc"),
+
+        // For local development, comment out the URL targets above and uncomment:
+        // .binaryTarget(
+        //     name: "Iroh",
+        //     path: "artifacts/Iroh.xcframework"),
+        // Then change IrohLib dependencies to: .byName(name: "Iroh")
+
         .testTarget(
           name: "IrohLibTests",
           dependencies: ["IrohLib"]),
