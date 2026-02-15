@@ -49,12 +49,12 @@ let package = Package(
         .binaryTarget(
             name: "IrohiOS",
             url: "https://github.com/kylehowells/iroh-ffi/releases/download/v0.96.0/Iroh-ios.xcframework.zip",
-            checksum: "ccdbf9d9e2b2ca701ba2e5b94791f63de25f5de2c505301e33c2504ee219f89f"),
+            checksum: "193c3c36d0f8127bf6f38292f14d5b18d07683ace992b92eed5bf5809f58957b"),
         // macOS (Apple Silicon): 60 MB download
         .binaryTarget(
             name: "IrohMacOS",
             url: "https://github.com/kylehowells/iroh-ffi/releases/download/v0.96.0/Iroh-macos.xcframework.zip",
-            checksum: "2ce7c5815425b837a4c37d0105a3e4d81548d7e05cba922588036e20eee21faa"),
+            checksum: "15ac8d080ffcdcedb624768dd8c668a03527d6f8ee6832f976c1ab725eb3fde4"),
 
         // For local development, comment out the URL targets above and uncomment:
         // .binaryTarget(
