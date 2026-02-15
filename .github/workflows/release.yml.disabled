@@ -148,16 +148,26 @@ jobs:
     - name: Make swift
       run: |
         ./make_swift.sh
-        zip -r IrohLib.xcframework.zip Iroh.xcframework/*
-    - name: Upload release archive
+        zip -r Iroh-ios.xcframework.zip Iroh-ios.xcframework/
+        zip -r Iroh-macos.xcframework.zip Iroh-macos.xcframework/
+    - name: Upload iOS xcframework
       uses: actions/upload-release-asset@v1.0.2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: IrohLib.xcframework.zip 
-        asset_name: IrohLib.xcframework.zip 
-        asset_content_type: application/octet-stream
+        asset_path: Iroh-ios.xcframework.zip
+        asset_name: Iroh-ios.xcframework.zip
+        asset_content_type: application/zip
+    - name: Upload macOS xcframework
+      uses: actions/upload-release-asset@v1.0.2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: Iroh-macos.xcframework.zip
+        asset_name: Iroh-macos.xcframework.zip
+        asset_content_type: application/zip
         
   build-and-publish-kotlin:
     name: Build & publish kotlin libraries

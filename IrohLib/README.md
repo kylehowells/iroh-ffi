@@ -22,9 +22,7 @@ Add IrohLib to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(path: "../IrohLib")  // Local path
-    // Or from GitHub:
-    // .package(url: "https://github.com/kylehowells/iroh-ffi", branch: "main")
+    .package(url: "https://github.com/kylehowells/iroh-ffi", from: "0.96.0")
 ]
 ```
 
@@ -33,9 +31,17 @@ Then add it to your target:
 ```swift
 .target(
     name: "YourApp",
-    dependencies: ["IrohLib"]
+    dependencies: [
+        .product(name: "IrohLib", package: "iroh-ffi")
+    ],
+    linkerSettings: [
+        .linkedFramework("SystemConfiguration"),
+        .linkedFramework("Security"),
+    ]
 )
 ```
+
+SwiftPM will automatically download the correct pre-built xcframework for your platform (iOS or macOS).
 
 ## Quick Start
 
@@ -275,7 +281,7 @@ These Swift demos are fully compatible with:
 
 ## Building from Source
 
-IrohLib requires a pre-built `Iroh.xcframework` containing the compiled Rust library. This is not included in the git repository due to its size (~280MB per architecture).
+IrohLib requires pre-built xcframeworks containing the compiled Rust library.
 
 ### Prerequisites
 
@@ -288,7 +294,7 @@ IrohLib requires a pre-built `Iroh.xcframework` containing the compiled Rust lib
   rustup target add aarch64-apple-darwin
   ```
 
-### Build the xcframework
+### Build the xcframeworks
 
 From the repository root:
 
@@ -298,63 +304,17 @@ From the repository root:
 
 This will:
 1. Compile the Rust library for all Apple platforms
-2. Generate the xcframework in `IrohLib/artifacts/Iroh.xcframework`
+2. Generate library-based xcframeworks: `Iroh-ios.xcframework` and `Iroh-macos.xcframework`
 3. Generate Swift bindings via UniFFI
 
-After building, you can use IrohLib as a local package dependency.
-
-## Publishing Binary Releases
-
-To allow users to consume IrohLib without building from source, publish the xcframework as a GitHub release.
-
-### 1. Build and zip the xcframework
-
-```bash
-./make_swift.sh
-cd IrohLib/artifacts
-zip -r Iroh.xcframework.zip Iroh.xcframework
-shasum -a 256 Iroh.xcframework.zip
-# Note the checksum output
-```
-
-### 2. Create GitHub release
-
-1. Create a new release on GitHub (e.g., `v0.96.0`)
-2. Attach `Iroh.xcframework.zip` to the release
-
-### 3. Update Package.swift for binary distribution
-
-Change the binary target from local path to URL:
+For local development, update `IrohLib/Package.swift` to use local paths:
 
 ```swift
-// Before (local path - for development)
-.binaryTarget(
-    name: "Iroh",
-    path: "artifacts/Iroh.xcframework")
-
-// After (remote URL - for distribution)
-.binaryTarget(
-    name: "Iroh",
-    url: "https://github.com/kylehowells/iroh-ffi/releases/download/v0.96.0/Iroh.xcframework.zip",
-    checksum: "YOUR_SHA256_CHECKSUM_HERE")
+.binaryTarget(name: "IrohiOS", path: "../Iroh-ios.xcframework"),
+.binaryTarget(name: "IrohMacOS", path: "../Iroh-macos.xcframework"),
 ```
 
-### 4. Tag and push
-
-```bash
-git add IrohLib/Package.swift
-git commit -m "Release v0.96.0 with binary xcframework"
-git tag v0.96.0
-git push origin main --tags
-```
-
-Now users can add IrohLib directly from GitHub:
-
-```swift
-dependencies: [
-    .package(url: "https://github.com/kylehowells/iroh-ffi", from: "0.96.0")
-]
-```
+See [RELEASE.md](../RELEASE.md) for the full release process.
 
 ## License
 

@@ -78,4 +78,4 @@ swift run <TargetName>
 
 ## Dependencies
 
-All executable targets depend on `IrohLib`, which wraps the `Iroh.xcframework` containing the Rust FFI bindings.
+All executable targets depend on `IrohLib`, which wraps the Iroh xcframeworks (`Iroh-ios.xcframework` / `Iroh-macos.xcframework`) containing the Rust FFI bindings.

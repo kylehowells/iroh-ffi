@@ -1,18 +1,19 @@
 Pod::Spec.new do |spec|
   spec.name         = "IrohLibFramework"
-  spec.version      = "0.23.0"
-  spec.summary      = "Complied rust cocoa framework for Iroh"
+  spec.version      = "0.96.0"
+  spec.summary      = "Compiled Rust library for Iroh"
   spec.description  = <<-DESC
-                   Complied rust cocoa framework for Iroh.
+                   Compiled Rust library for Iroh - a toolkit for building distributed applications.
                    DESC
-  spec.homepage     = "https://github.com/n0-computer/iroh-ffi"
+  spec.homepage     = "https://github.com/kylehowells/iroh-ffi"
   spec.license      = { :type => "MIT & Apache License, Version 2.0",   :text => <<-LICENSE
                           Refer to LICENSE-MIT and LICENSE-APACHE in the repository.
                         LICENSE
                       }
-  spec.author       = { "b5" => "sparkle_pony_2000@n0.computer" }
+  spec.author       = { "Kyle Howells" => "" }
   spec.ios.deployment_target  = '15.0'
+  spec.osx.deployment_target  = '12.0'
   spec.static_framework = true
-  spec.source = { :http => "https://github.com/n0-computer/iroh-ffi/releases/download/v#{spec.version}/IrohLib.xcframework.zip" }
-  spec.vendored_frameworks = 'Iroh.xcframework'
+  spec.source = { :http => "https://github.com/kylehowells/iroh-ffi/releases/download/v#{spec.version}/Iroh-ios.xcframework.zip" }
+  spec.ios.vendored_frameworks = 'Iroh-ios.xcframework'
 end

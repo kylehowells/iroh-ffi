@@ -111,7 +111,6 @@ jobs:
     - name: Swift tests
       run: |
         ./make_swift.sh
-        cp -R Iroh.xcframework IrohLib/artifacts/
         cd IrohLib
         swift test
 

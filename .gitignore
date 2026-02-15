@@ -14,18 +14,14 @@ DerivedData/
 /include
 .build
 
-/IrohLib.xcframework.zip
+# xcframework build outputs (library-based)
+/Iroh-ios.xcframework/
+/Iroh-macos.xcframework/
+/Iroh.xcframework/
+*.xcframework.zip
 
-/Iroh.xcframework/*/Iroh.framework/*
-/Iroh.xcframework/*/Iroh.framework/Headers/*
-!/Iroh.xcframework/*/Iroh.framework/Info.plist
-!/Iroh.xcframework/*/Iroh.framework/Modules
-!/Iroh.xcframework/*/Iroh.framework/Headers
-!/Iroh.xcframework/*/Iroh.framework/Headers/iroh_ffiFFI.h
-!/Iroh.xcframework/*/Iroh.framework/Headers/Export.h
-
-
-/IrohLib/artifacts/
+# xcframework build intermediates
+/include/xcframework-headers/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

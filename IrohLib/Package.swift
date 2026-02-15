@@ -57,10 +57,8 @@ let package = Package(
             checksum: "15ac8d080ffcdcedb624768dd8c668a03527d6f8ee6832f976c1ab725eb3fde4"),
 
         // For local development, comment out the URL targets above and uncomment:
-        // .binaryTarget(
-        //     name: "Iroh",
-        //     path: "artifacts/Iroh.xcframework"),
-        // Then change IrohLib dependencies to: .byName(name: "Iroh")
+        // .binaryTarget(name: "IrohiOS", path: "../Iroh-ios.xcframework"),
+        // .binaryTarget(name: "IrohMacOS", path: "../Iroh-macos.xcframework"),
 
         .testTarget(
           name: "IrohLibTests",
