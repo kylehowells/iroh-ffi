@@ -86,3 +86,6 @@ uniffi = { version = "0.28.0", features = ["build"] }
 
 [profile.release]
 lto = true
+codegen-units = 1
+strip = true
+opt-level = "z"
