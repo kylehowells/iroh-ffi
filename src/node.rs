@@ -3,6 +3,7 @@ use std::{collections::HashMap, fmt::Debug, path::PathBuf, sync::Arc, time::Dura
 use iroh_blobs::{
     BlobsProtocol,
     provider::events::EventSender,
+    store::GcConfig,
 };
 use iroh_docs::protocol::Docs;
 use iroh_gossip::net::Gossip;
@@ -175,7 +176,13 @@ impl Iroh {
         } else {
             (None, None)
         };
-        let blobs_store = iroh_blobs::store::fs::FsStore::load(path.join("blobs"))
+        let gc_config = gc_config_from_options(&options);
+        let mut fs_opts = iroh_blobs::store::fs::options::Options::new(&path.join("blobs"));
+        fs_opts.gc = gc_config;
+        let blobs_store = iroh_blobs::store::fs::FsStore::load_with_opts(
+            path.join("blobs").join("blobs.db"),
+            fs_opts,
+        )
             .await
             .map_err(|err| anyhow::anyhow!(err))?;
         let store: iroh_blobs::api::Store = blobs_store.into();
@@ -212,7 +219,12 @@ impl Iroh {
         } else {
             (None, None)
         };
-        let blobs_store = iroh_blobs::store::mem::MemStore::default();
+        let gc_config = gc_config_from_options(&options);
+        let blobs_store = iroh_blobs::store::mem::MemStore::new_with_opts(
+            iroh_blobs::store::mem::Options {
+                gc_config,
+            },
+        );
         let store: iroh_blobs::api::Store = blobs_store.into();
 
         let (builder, gossip, docs, memory_lookup) = apply_options(
@@ -240,6 +252,16 @@ impl Iroh {
     }
 }
 
+fn gc_config_from_options(options: &NodeOptions) -> Option<GcConfig> {
+    match options.gc_interval_millis {
+        Some(0) | None => None,
+        Some(millis) => Some(GcConfig {
+            interval: Duration::from_millis(millis),
+            add_protected: None,
+        }),
+    }
+}
+
 async fn apply_options(
     mut builder: iroh::endpoint::Builder,
     options: NodeOptions,
@@ -252,17 +274,6 @@ async fn apply_options(
     Option<iroh_docs::api::DocsApi>,
     MemoryLookup,
 )> {
-    // Note: gc_period is currently unused - GC is now configured during store creation
-    // via GcConfig in the store's Options struct
-    let _gc_period = if let Some(millis) = options.gc_interval_millis {
-        match millis {
-            0 => None,
-            millis => Some(Duration::from_millis(millis)),
-        }
-    } else {
-        None
-    };
-
     let blob_events = options.blob_events.map(|cb| BlobProvideEvents::new(cb).into());
 
     if let Some(addr) = options.ipv4_addr {
@@ -329,8 +340,6 @@ async fn apply_options(
     } else {
         None
     };
-
-    // GC is handled by the store itself now via GcConfig during store creation
 
     // Add custom protocols
     if let Some(protocols) = options.protocols {
