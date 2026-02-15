@@ -4,24 +4,37 @@ import PackageDescription
 let package = Package(
     name: "IrohLib",
     platforms: [
-        .iOS(.v15)
+        .iOS(.v15),
+        .macOS(.v12)
     ],
     products: [
         .library(
             name: "IrohLib",
-            targets: ["IrohLib", "Iroh"]),
+            targets: ["IrohLib"]),
     ],
     dependencies: [],
     targets: [
         .target(
             name: "IrohLib",
             dependencies: [
-                .byName(name: "Iroh")
+                .target(name: "IrohiOS", condition: .when(platforms: [.iOS])),
+                .target(name: "IrohMacOS", condition: .when(platforms: [.macOS])),
             ],
-            path: "IrohLib/Sources/IrohLib"),
+            path: "IrohLib/Sources/IrohLib",
+            linkerSettings: [
+              .linkedFramework("SystemConfiguration")
+            ]),
+
+        // Per-platform binary targets — SwiftPM only links the one matching your build platform.
+        // iOS (device + simulator): 177 MB download
         .binaryTarget(
-            name: "Iroh",
-            url: "https://github.com/n0-computer/iroh-ffi/releases/download/v0.20.0/IrohLib.xcframework.zip",
-            checksum: "8123c2d43690c423e9bc8993c935b2fe009731f3b65b95754358570077037858")
+            name: "IrohiOS",
+            url: "https://github.com/kylehowells/iroh-ffi/releases/download/v0.96.0/Iroh-ios.xcframework.zip",
+            checksum: "b0ccebc59f00ff3555a7c7b2cf41e8ad72747143a2de2a790ae9b5b31b9f3370"),
+        // macOS (Apple Silicon): 60 MB download
+        .binaryTarget(
+            name: "IrohMacOS",
+            url: "https://github.com/kylehowells/iroh-ffi/releases/download/v0.96.0/Iroh-macos.xcframework.zip",
+            checksum: "b807b305eac6728b8663d7b354fd571a5fbde6bb44b22e87c565fca03e0db8fc"),
     ]
 )
