@@ -168,14 +168,15 @@ impl Connection {
     /// Returns 0 if no selected path is available yet.
     #[uniffi::method]
     pub fn rtt(&self) -> u64 {
-        // In iroh 0.96, Connection::rtt() requires a PathId.
-        // Use paths() watcher to find the selected path's RTT instead.
+        // Use paths() watcher to find the selected path's RTT.
         use iroh::Watcher;
         let paths = self.0.paths().get();
         let mut rtt_ms = 0u64;
         for path in paths.iter() {
             if path.is_selected() {
-                rtt_ms = path.rtt().as_millis() as u64;
+                if let Some(rtt) = path.rtt() {
+                    rtt_ms = rtt.as_millis() as u64;
+                }
                 break;
             }
         }

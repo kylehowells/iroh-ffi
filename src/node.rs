@@ -166,7 +166,7 @@ impl Iroh {
             .await
             .map_err(|err| anyhow::anyhow!(err))?;
 
-        let builder = iroh::Endpoint::builder();
+        let builder = iroh::Endpoint::builder(iroh::endpoint::presets::N0);
         let (docs_store, author_store) = if options.enable_docs {
             let docs_store = iroh_docs::store::Store::persistent(path.join("docs.redb"))?;
             let author_store =
@@ -209,7 +209,7 @@ impl Iroh {
     /// Create a new in memory iroh node with options.
     #[uniffi::constructor(async_runtime = "tokio")]
     pub async fn memory_with_options(options: NodeOptions) -> Result<Self, IrohError> {
-        let builder = iroh::Endpoint::builder();
+        let builder = iroh::Endpoint::builder(iroh::endpoint::presets::N0);
 
         let (docs_store, author_store) = if options.enable_docs {
             let docs_store = iroh_docs::store::Store::memory();

@@ -1849,7 +1849,7 @@ mod tests {
 
         let size = 100;
         let mut buf = vec![0u8; size];
-        rand::thread_rng().fill_bytes(&mut buf);
+        rand::rng().fill_bytes(&mut buf);
         let mut file = tokio::fs::File::create(path.clone()).await.unwrap();
         file.write_all(&buf.clone()).await.unwrap();
         file.flush().await.unwrap();

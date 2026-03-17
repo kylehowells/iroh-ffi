@@ -26,15 +26,13 @@ let package = Package(
             ]),
 
         // Per-platform binary targets — SwiftPM only links the one matching your build platform.
-        // iOS (device + simulator): 177 MB download
         .binaryTarget(
             name: "IrohiOS",
-            url: "https://github.com/kylehowells/iroh-ffi/releases/download/v0.96.0/Iroh-ios.xcframework.zip",
-            checksum: "193c3c36d0f8127bf6f38292f14d5b18d07683ace992b92eed5bf5809f58957b"),
-        // macOS (Apple Silicon): 60 MB download
+            url: "https://github.com/kylehowells/iroh-ffi/releases/download/v0.97.0/Iroh-ios.xcframework.zip",
+            checksum: "69207361cd4837fb7d91d0da50d608016d7af66a0f2e3af726b74f48b319fbaa"),
         .binaryTarget(
             name: "IrohMacOS",
-            url: "https://github.com/kylehowells/iroh-ffi/releases/download/v0.96.0/Iroh-macos.xcframework.zip",
-            checksum: "15ac8d080ffcdcedb624768dd8c668a03527d6f8ee6832f976c1ab725eb3fde4"),
+            url: "https://github.com/kylehowells/iroh-ffi/releases/download/v0.97.0/Iroh-macos.xcframework.zip",
+            checksum: "eeb3ac2db0b53de576b57faa4c18a21e91d84d475e740faecf2746cc9e51dc8f"),
     ]
 )

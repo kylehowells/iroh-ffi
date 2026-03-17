@@ -1622,7 +1622,7 @@ mod tests {
     async fn blobs_add_get_bytes_size(node: &Iroh, size: usize) -> Arc<Hash> {
         // create bytes
         let mut bytes = vec![0; size];
-        rand::thread_rng().fill_bytes(&mut bytes);
+        rand::rng().fill_bytes(&mut bytes);
         // add blob
         let add_outcome = node.blobs().add_bytes(bytes.to_vec()).await.unwrap();
         // check outcome
@@ -1650,7 +1650,7 @@ mod tests {
         // create bytes
         let blob_size = 100;
         let mut bytes = vec![0; blob_size];
-        rand::thread_rng().fill_bytes(&mut bytes);
+        rand::rng().fill_bytes(&mut bytes);
 
         // write to file
         let dir = tempfile::tempdir().unwrap();
@@ -1748,7 +1748,7 @@ mod tests {
             let path = dir.path().join(i.to_string());
             let mut file = std::fs::File::create(path).unwrap();
             let mut bytes = vec![0; blob_size];
-            rand::thread_rng().fill_bytes(&mut bytes);
+            rand::rng().fill_bytes(&mut bytes);
             file.write_all(&bytes).unwrap()
         }
 
@@ -1862,7 +1862,7 @@ mod tests {
 
         for _i in 0..num_blobs {
             let mut bytes = vec![0; blob_size];
-            rand::thread_rng().fill_bytes(&mut bytes);
+            rand::rng().fill_bytes(&mut bytes);
             blobs.push(bytes);
         }
 
