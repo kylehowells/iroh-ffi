@@ -3506,6 +3506,14 @@ public protocol ConnectionProtocol: AnyObject {
 
     func closed() async -> String
 
+    /**
+     * Get the currently selected transport path for this connection.
+     *
+     * This reports whether the active transmission path is relay-backed or direct IP,
+     * along with the selected path RTT when available.
+     */
+    func currentPathState() -> ConnectionPathState
+
     func datagramSendBufferSpace() -> UInt64
 
     func maxDatagramSize() -> UInt64?
@@ -3650,6 +3658,18 @@ open class Connection:
                 liftFunc: FfiConverterString.lift,
                 errorHandler: nil
             )
+    }
+
+    /**
+     * Get the currently selected transport path for this connection.
+     *
+     * This reports whether the active transmission path is relay-backed or direct IP,
+     * along with the selected path RTT when available.
+     */
+    open func currentPathState() -> ConnectionPathState {
+        return try! FfiConverterTypeConnectionPathState.lift(try! rustCall {
+            uniffi_iroh_ffi_fn_method_connection_current_path_state(self.uniffiClonePointer(), $0)
+        })
     }
 
     open func datagramSendBufferSpace() -> UInt64 {
@@ -11284,6 +11304,108 @@ public func FfiConverterTypeCollectionInfo_lower(_ value: CollectionInfo) -> Rus
     return FfiConverterTypeCollectionInfo.lower(value)
 }
 
+public struct ConnectionPathState {
+    /**
+     * The currently selected transport-path kind.
+     */
+    public var kind: ConnectionPathKind
+    /**
+     * The remote direct IP transport address, if the selected path is direct.
+     */
+    public var directAddress: String?
+    /**
+     * The remote relay URL, if the selected path is relay-backed.
+     */
+    public var relayUrl: String?
+    /**
+     * The selected path RTT in milliseconds, if a selected path is available.
+     */
+    public var rttMs: UInt64?
+
+    /// Default memberwise initializers are never public by default, so we
+    /// declare one manually.
+    public init(
+        /*
+         * The currently selected transport-path kind.
+         */ kind: ConnectionPathKind,
+        /*
+         * The remote direct IP transport address, if the selected path is direct.
+         */ directAddress: String?,
+        /*
+         * The remote relay URL, if the selected path is relay-backed.
+         */ relayUrl: String?,
+        /*
+         * The selected path RTT in milliseconds, if a selected path is available.
+         */ rttMs: UInt64?
+    ) {
+        self.kind = kind
+        self.directAddress = directAddress
+        self.relayUrl = relayUrl
+        self.rttMs = rttMs
+    }
+}
+
+extension ConnectionPathState: Equatable, Hashable {
+    public static func == (lhs: ConnectionPathState, rhs: ConnectionPathState) -> Bool {
+        if lhs.kind != rhs.kind {
+            return false
+        }
+        if lhs.directAddress != rhs.directAddress {
+            return false
+        }
+        if lhs.relayUrl != rhs.relayUrl {
+            return false
+        }
+        if lhs.rttMs != rhs.rttMs {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(kind)
+        hasher.combine(directAddress)
+        hasher.combine(relayUrl)
+        hasher.combine(rttMs)
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeConnectionPathState: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ConnectionPathState {
+        return
+            try ConnectionPathState(
+                kind: FfiConverterTypeConnectionPathKind.read(from: &buf),
+                directAddress: FfiConverterOptionString.read(from: &buf),
+                relayUrl: FfiConverterOptionString.read(from: &buf),
+                rttMs: FfiConverterOptionUInt64.read(from: &buf)
+            )
+    }
+
+    public static func write(_ value: ConnectionPathState, into buf: inout [UInt8]) {
+        FfiConverterTypeConnectionPathKind.write(value.kind, into: &buf)
+        FfiConverterOptionString.write(value.directAddress, into: &buf)
+        FfiConverterOptionString.write(value.relayUrl, into: &buf)
+        FfiConverterOptionUInt64.write(value.rttMs, into: &buf)
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConnectionPathState_lift(_ buf: RustBuffer) throws -> ConnectionPathState {
+    return try FfiConverterTypeConnectionPathState.lift(buf)
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConnectionPathState_lower(_ value: ConnectionPathState) -> RustBuffer {
+    return FfiConverterTypeConnectionPathState.lower(value)
+}
+
 /**
  * Stats counter
  */
@@ -14703,6 +14825,73 @@ extension CapabilityKind: Equatable, Hashable {}
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum ConnectionPathKind {
+    /**
+     * No selected transport path is available yet.
+     */
+    case unknown
+    /**
+     * The current selected transport path is a direct IP connection.
+     */
+    case direct
+    /**
+     * The current selected transport path is a relay connection.
+     */
+    case relay
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeConnectionPathKind: FfiConverterRustBuffer {
+    typealias SwiftType = ConnectionPathKind
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ConnectionPathKind {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        case 1: return .unknown
+
+        case 2: return .direct
+
+        case 3: return .relay
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ConnectionPathKind, into buf: inout [UInt8]) {
+        switch value {
+        case .unknown:
+            writeInt(&buf, Int32(1))
+
+        case .direct:
+            writeInt(&buf, Int32(2))
+
+        case .relay:
+            writeInt(&buf, Int32(3))
+        }
+    }
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConnectionPathKind_lift(_ buf: RustBuffer) throws -> ConnectionPathKind {
+    return try FfiConverterTypeConnectionPathKind.lift(buf)
+}
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+public func FfiConverterTypeConnectionPathKind_lower(_ value: ConnectionPathKind) -> RustBuffer {
+    return FfiConverterTypeConnectionPathKind.lower(value)
+}
+
+extension ConnectionPathKind: Equatable, Hashable {}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 /* 
  * Whether the content status is available on a node.
  */
@@ -16715,6 +16904,9 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_iroh_ffi_checksum_method_connection_closed() != 30404 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_iroh_ffi_checksum_method_connection_current_path_state() != 1525 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_iroh_ffi_checksum_method_connection_datagram_send_buffer_space() != 52904 {

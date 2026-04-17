@@ -1,6 +1,7 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use iroh::endpoint;
+use iroh_base::TransportAddr;
 use tokio::sync::Mutex;
 
 use crate::{IrohError, NodeAddr};
@@ -75,6 +76,63 @@ pub struct Connection(endpoint::Connection);
 impl From<endpoint::Connection> for Connection {
     fn from(value: endpoint::Connection) -> Self {
         Self(value)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
+pub enum ConnectionPathKind {
+    /// No selected transport path is available yet.
+    Unknown,
+    /// The current selected transport path is a direct IP connection.
+    Direct,
+    /// The current selected transport path is a relay connection.
+    Relay,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct ConnectionPathState {
+    /// The currently selected transport-path kind.
+    pub kind: ConnectionPathKind,
+    /// The remote direct IP transport address, if the selected path is direct.
+    pub direct_address: Option<String>,
+    /// The remote relay URL, if the selected path is relay-backed.
+    pub relay_url: Option<String>,
+    /// The selected path RTT in milliseconds, if a selected path is available.
+    pub rtt_ms: Option<u64>,
+}
+
+impl ConnectionPathState {
+    fn unknown() -> Self {
+        Self {
+            kind: ConnectionPathKind::Unknown,
+            direct_address: None,
+            relay_url: None,
+            rtt_ms: None,
+        }
+    }
+}
+
+fn connection_path_state_for_selected_transport(
+    selected_transport: Option<&TransportAddr>,
+    rtt: Option<Duration>,
+) -> ConnectionPathState {
+    let rtt_ms = rtt.map(|value| value.as_millis() as u64);
+
+    match selected_transport {
+        Some(TransportAddr::Ip(addr)) => ConnectionPathState {
+            kind: ConnectionPathKind::Direct,
+            direct_address: Some(addr.to_string()),
+            relay_url: None,
+            rtt_ms,
+        },
+        Some(TransportAddr::Relay(url)) => ConnectionPathState {
+            kind: ConnectionPathKind::Relay,
+            direct_address: None,
+            relay_url: Some(url.to_string()),
+            rtt_ms,
+        },
+        Some(_) => ConnectionPathState::unknown(),
+        None => ConnectionPathState::unknown(),
     }
 }
 
@@ -183,6 +241,27 @@ impl Connection {
         rtt_ms
     }
 
+    /// Get the currently selected transport path for this connection.
+    ///
+    /// This reports whether the active transmission path is relay-backed or direct IP,
+    /// along with the selected path RTT when available.
+    #[uniffi::method]
+    pub fn current_path_state(&self) -> ConnectionPathState {
+        use iroh::Watcher;
+        let paths = self.0.paths().get();
+
+        for path in paths.iter() {
+            if path.is_selected() {
+                return connection_path_state_for_selected_transport(
+                    Some(path.remote_addr()),
+                    Some(path.rtt()),
+                );
+            }
+        }
+
+        ConnectionPathState::unknown()
+    }
+
     #[uniffi::method]
     pub fn stable_id(&self) -> u64 {
         self.0.stable_id() as _
@@ -226,6 +305,55 @@ impl BiStream {
     #[uniffi::method]
     pub fn recv(&self) -> RecvStream {
         self.recv.clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn maps_selected_direct_transport_to_direct_path_state() {
+        let transport: TransportAddr = TransportAddr::Ip(
+            "127.0.0.1:7777".parse::<std::net::SocketAddr>().unwrap(),
+        );
+
+        let state = connection_path_state_for_selected_transport(
+            Some(&transport),
+            Some(Duration::from_millis(42)),
+        );
+
+        assert_eq!(state.kind, ConnectionPathKind::Direct);
+        assert_eq!(state.direct_address.as_deref(), Some("127.0.0.1:7777"));
+        assert_eq!(state.relay_url, None);
+        assert_eq!(state.rtt_ms, Some(42));
+    }
+
+    #[test]
+    fn maps_selected_relay_transport_to_relay_path_state() {
+        let transport: TransportAddr = TransportAddr::Relay(
+            "https://relay.example.test".parse().unwrap(),
+        );
+
+        let state = connection_path_state_for_selected_transport(
+            Some(&transport),
+            Some(Duration::from_millis(15)),
+        );
+
+        assert_eq!(state.kind, ConnectionPathKind::Relay);
+        assert_eq!(state.direct_address, None);
+        assert_eq!(state.relay_url.as_deref(), Some("https://relay.example.test/"));
+        assert_eq!(state.rtt_ms, Some(15));
+    }
+
+    #[test]
+    fn maps_missing_selected_transport_to_unknown_path_state() {
+        let state = connection_path_state_for_selected_transport(None, None);
+
+        assert_eq!(state.kind, ConnectionPathKind::Unknown);
+        assert_eq!(state.direct_address, None);
+        assert_eq!(state.relay_url, None);
+        assert_eq!(state.rtt_ms, None);
     }
 }
 
