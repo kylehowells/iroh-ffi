@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name         = "IrohLib"
-  spec.version      = "0.97.0"
+  spec.version      = "0.97.2"
   spec.summary      = "iroh is a toolkit for building distributed apps"
   spec.description  = <<-DESC
                       Build distributed apps that raise the status quo for your users.
@@ -15,7 +15,7 @@ Pod::Spec.new do |spec|
                             }
   spec.author             = { "b5" => "sparkle_pony_2000@n0.computer" }
   spec.social_media_url   = "https://twitter.com/iroh_n0"
-  spec.source             = { :git => "https://github.com/n0-computer/iroh-ffi.git", :tag => "#{spec.version}" }
+  spec.source             = { :git => "https://github.com/kylehowells/iroh-ffi.git", :tag => "v#{spec.version}" }
   spec.static_framework   = true
   spec.source_files       = "IrohLib/Sources/IrohLib/*.swift"
   spec.swift_version      = '5.9'

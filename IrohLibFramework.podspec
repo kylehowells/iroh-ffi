@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name         = "IrohLibFramework"
-  spec.version      = "0.96.0"
+  spec.version      = "0.97.2"
   spec.summary      = "Compiled Rust library for Iroh"
   spec.description  = <<-DESC
                    Compiled Rust library for Iroh - a toolkit for building distributed applications.
