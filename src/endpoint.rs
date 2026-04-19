@@ -101,6 +101,20 @@ pub struct ConnectionPathState {
     pub rtt_ms: Option<u64>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct ConnectionPathInfo {
+    /// The transport-path kind for this candidate path.
+    pub kind: ConnectionPathKind,
+    /// The remote direct IP transport address, if this path is direct.
+    pub direct_address: Option<String>,
+    /// The remote relay URL, if this path is relay-backed.
+    pub relay_url: Option<String>,
+    /// The path RTT in milliseconds, if available.
+    pub rtt_ms: Option<u64>,
+    /// Whether this path is currently selected.
+    pub is_selected: bool,
+}
+
 impl ConnectionPathState {
     fn unknown() -> Self {
         Self {
@@ -112,27 +126,48 @@ impl ConnectionPathState {
     }
 }
 
-fn connection_path_state_for_selected_transport(
-    selected_transport: Option<&TransportAddr>,
+fn connection_path_info_for_transport(
+    transport: Option<&TransportAddr>,
     rtt: Option<Duration>,
-) -> ConnectionPathState {
+    is_selected: bool,
+) -> ConnectionPathInfo {
     let rtt_ms = rtt.map(|value| value.as_millis() as u64);
 
-    match selected_transport {
-        Some(TransportAddr::Ip(addr)) => ConnectionPathState {
+    match transport {
+        Some(TransportAddr::Ip(addr)) => ConnectionPathInfo {
             kind: ConnectionPathKind::Direct,
             direct_address: Some(addr.to_string()),
             relay_url: None,
             rtt_ms,
+            is_selected,
         },
-        Some(TransportAddr::Relay(url)) => ConnectionPathState {
+        Some(TransportAddr::Relay(url)) => ConnectionPathInfo {
             kind: ConnectionPathKind::Relay,
             direct_address: None,
             relay_url: Some(url.to_string()),
             rtt_ms,
+            is_selected,
         },
-        Some(_) => ConnectionPathState::unknown(),
-        None => ConnectionPathState::unknown(),
+        Some(_) | None => ConnectionPathInfo {
+            kind: ConnectionPathKind::Unknown,
+            direct_address: None,
+            relay_url: None,
+            rtt_ms,
+            is_selected,
+        },
+    }
+}
+
+fn connection_path_state_for_selected_transport(
+    selected_transport: Option<&TransportAddr>,
+    rtt: Option<Duration>,
+) -> ConnectionPathState {
+    let info = connection_path_info_for_transport(selected_transport, rtt, true);
+    ConnectionPathState {
+        kind: info.kind,
+        direct_address: info.direct_address,
+        relay_url: info.relay_url,
+        rtt_ms: info.rtt_ms,
     }
 }
 
@@ -254,12 +289,28 @@ impl Connection {
             if path.is_selected() {
                 return connection_path_state_for_selected_transport(
                     Some(path.remote_addr()),
-                    Some(path.rtt()),
+                    path.rtt(),
                 );
             }
         }
 
         ConnectionPathState::unknown()
+    }
+
+    /// Returns all known transport paths for this connection.
+    #[uniffi::method]
+    pub fn path_infos(&self) -> Vec<ConnectionPathInfo> {
+        use iroh::Watcher;
+        let paths = self.0.paths().get();
+        paths.iter()
+            .map(|path| {
+                connection_path_info_for_transport(
+                    Some(path.remote_addr()),
+                    path.rtt(),
+                    path.is_selected(),
+                )
+            })
+            .collect()
     }
 
     #[uniffi::method]
@@ -354,6 +405,25 @@ mod tests {
         assert_eq!(state.direct_address, None);
         assert_eq!(state.relay_url, None);
         assert_eq!(state.rtt_ms, None);
+    }
+
+    #[test]
+    fn maps_selected_direct_transport_to_path_info() {
+        let transport: TransportAddr = TransportAddr::Ip(
+            "127.0.0.1:7777".parse::<std::net::SocketAddr>().unwrap(),
+        );
+
+        let info = connection_path_info_for_transport(
+            Some(&transport),
+            Some(Duration::from_millis(42)),
+            true,
+        );
+
+        assert_eq!(info.kind, ConnectionPathKind::Direct);
+        assert_eq!(info.direct_address.as_deref(), Some("127.0.0.1:7777"));
+        assert_eq!(info.relay_url, None);
+        assert_eq!(info.rtt_ms, Some(42));
+        assert!(info.is_selected);
     }
 }
 
