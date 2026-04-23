@@ -6,6 +6,7 @@ use std::{
 };
 
 use futures::TryStreamExt;
+use iroh::address_lookup::MemoryLookup;
 use serde::{Deserialize, Serialize};
 use tokio::io::AsyncReadExt;
 
@@ -18,6 +19,7 @@ use crate::{IrohError, NodeAddr};
 pub struct Blobs {
     store: iroh_blobs::api::Store,
     endpoint: iroh::Endpoint,
+    memory_lookup: MemoryLookup,
 }
 
 #[uniffi::export]
@@ -27,6 +29,7 @@ impl Iroh {
         Blobs {
             store: self.store.clone(),
             endpoint: self.router.endpoint().clone(),
+            memory_lookup: self.memory_lookup.clone(),
         }
     }
 }
@@ -290,10 +293,9 @@ impl Blobs {
     ) -> Result<(), IrohError> {
         // The download API has changed significantly - now uses downloader
         let downloader = self.store.downloader(&self.endpoint);
-        // For now, use a simplified version - full progress tracking needs more work
         let node_addr: iroh::EndpointAddr = opts.node.clone().try_into()?;
+        self.memory_lookup.add_endpoint_info(node_addr.clone());
 
-        // ContentDiscovery is impl for Vec<EndpointId>, so wrap the single node
         let providers = vec![node_addr.id];
 
         downloader.download(iroh_blobs::HashAndFormat::raw(hash.0), providers).await

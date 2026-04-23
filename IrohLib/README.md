@@ -22,7 +22,7 @@ Add IrohLib to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/kylehowells/iroh-ffi", from: "0.96.0")
+    .package(url: "https://github.com/kylehowells/iroh-ffi", from: "0.98.1")
 ]
 ```
 
@@ -275,7 +275,7 @@ blake3("chat") = 504c1dbb87fc1cd93594bd6baad1b520229bd222e16d9c48138998f602993c6
 ## Cross-Language Compatibility
 
 These Swift demos are fully compatible with:
-- Rust applications using `iroh` 0.96
+- Rust applications using `iroh` 0.98.1
 - Python applications using `iroh-ffi`
 - The [GossipDemo](https://github.com/example/GossipDemo) reference implementation
 

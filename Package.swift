@@ -28,11 +28,11 @@ let package = Package(
         // Per-platform binary targets — SwiftPM only links the one matching your build platform.
         .binaryTarget(
             name: "IrohiOS",
-            url: "https://github.com/kylehowells/iroh-ffi/releases/download/v0.97.2/Iroh-ios.xcframework.zip",
-            checksum: "c73e6bdfc6e3004f01dcce30fbe450526f79907c84214e4004cc4b07ce03db0f"),
+            url: "https://github.com/kylehowells/iroh-ffi/releases/download/v0.98.1/Iroh-ios.xcframework.zip",
+            checksum: "ebde1d225e9b2e0795a5ed3136d9850315b4b7f0c4c1cd236b1e80be3ee566e8"),
         .binaryTarget(
             name: "IrohMacOS",
-            url: "https://github.com/kylehowells/iroh-ffi/releases/download/v0.97.2/Iroh-macos.xcframework.zip",
-            checksum: "da64bca24f4cbdf398e7feda21fada3d38aca9f1e614ca893c18208a95fe9889"),
+            url: "https://github.com/kylehowells/iroh-ffi/releases/download/v0.98.1/Iroh-macos.xcframework.zip",
+            checksum: "b174cc503d0313444aee11118575f27de02cf6514c6ef5368ff01ebf0be086cf"),
     ]
 )

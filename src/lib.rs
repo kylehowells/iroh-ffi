@@ -1,16 +1,26 @@
+mod author;
+mod blob;
+mod doc;
 mod endpoint;
 mod error;
+mod gossip;
 mod key;
 mod net;
 mod node;
-mod node_addr;
+mod tag;
+mod ticket;
 
+pub use self::author::*;
+pub use self::blob::*;
+pub use self::doc::*;
 pub use self::endpoint::*;
 pub use self::error::*;
+pub use self::gossip::*;
 pub use self::key::*;
 pub use self::net::*;
 pub use self::node::*;
-pub use self::node_addr::*;
+pub use self::tag::*;
+pub use self::ticket::*;
 
 use tracing_subscriber::filter::LevelFilter;
 

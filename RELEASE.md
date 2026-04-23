@@ -23,9 +23,9 @@ swift package compute-checksum Iroh-ios.xcframework.zip
 swift package compute-checksum Iroh-macos.xcframework.zip
 ```
 
-3. Create GitHub release (e.g., `v0.96.0`) and upload both zips as release assets.
+3. Create GitHub release (e.g., `v0.98.1`) and upload both zips as release assets.
 
-4. Update checksums in both `Package.swift` (root) and `IrohLib/Package.swift`:
+4. Update checksums in `Package.swift` (root). `IrohLib/Package.swift` uses local path-based xcframeworks for development:
 
 ```swift
 .binaryTarget(
@@ -51,7 +51,7 @@ Consumers add the package via SwiftPM:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/kylehowells/iroh-ffi", from: "0.96.0")
+    .package(url: "https://github.com/kylehowells/iroh-ffi", from: "0.98.1")
 ]
 ```
 
