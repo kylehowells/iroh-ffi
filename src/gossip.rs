@@ -299,7 +299,6 @@ mod tests {
         // Get addresses and IDs for both nodes
         let n0_id = n0.net().node_id();
         let n0_addr = Arc::new(n0.net().node_addr());
-        let n1_id = n1.net().node_id();
         let n1_addr = Arc::new(n1.net().node_addr());
         println!("n0 addr: {:?}", n0_addr);
         println!("n1 addr: {:?}", n1_addr);

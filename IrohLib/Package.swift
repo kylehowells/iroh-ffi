@@ -41,7 +41,8 @@ let package = Package(
                 .target(name: "IrohMacOS", condition: .when(platforms: [.macOS])),
             ],
             linkerSettings: [
-              .linkedFramework("SystemConfiguration")
+              .linkedFramework("SystemConfiguration"),
+              .linkedFramework("CoreWLAN", .when(platforms: [.macOS]))
             ]),
 
         // Per-platform binary targets — SwiftPM only links the one matching your build platform.

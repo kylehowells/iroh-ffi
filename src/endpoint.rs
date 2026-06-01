@@ -261,15 +261,11 @@ impl Connection {
     /// Returns 0 if no selected path is available yet.
     #[uniffi::method]
     pub fn rtt(&self) -> u64 {
-        // Use paths() watcher to find the selected path's RTT.
-        use iroh::Watcher;
-        let paths = self.0.paths().get();
+        let paths = self.0.paths();
         let mut rtt_ms = 0u64;
         for path in paths.iter() {
             if path.is_selected() {
-                if let Some(rtt) = path.rtt() {
-                    rtt_ms = rtt.as_millis() as u64;
-                }
+                rtt_ms = path.rtt().as_millis() as u64;
                 break;
             }
         }
@@ -282,14 +278,13 @@ impl Connection {
     /// along with the selected path RTT when available.
     #[uniffi::method]
     pub fn current_path_state(&self) -> ConnectionPathState {
-        use iroh::Watcher;
-        let paths = self.0.paths().get();
+        let paths = self.0.paths();
 
         for path in paths.iter() {
             if path.is_selected() {
                 return connection_path_state_for_selected_transport(
                     Some(path.remote_addr()),
-                    path.rtt(),
+                    Some(path.rtt()),
                 );
             }
         }
@@ -300,13 +295,12 @@ impl Connection {
     /// Returns all known transport paths for this connection.
     #[uniffi::method]
     pub fn path_infos(&self) -> Vec<ConnectionPathInfo> {
-        use iroh::Watcher;
-        let paths = self.0.paths().get();
+        let paths = self.0.paths();
         paths.iter()
             .map(|path| {
                 connection_path_info_for_transport(
                     Some(path.remote_addr()),
-                    path.rtt(),
+                    Some(path.rtt()),
                     path.is_selected(),
                 )
             })

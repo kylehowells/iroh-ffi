@@ -22,7 +22,8 @@ let package = Package(
             ],
             path: "IrohLib/Sources/IrohLib",
             linkerSettings: [
-              .linkedFramework("SystemConfiguration")
+              .linkedFramework("SystemConfiguration"),
+              .linkedFramework("CoreWLAN", .when(platforms: [.macOS]))
             ]),
 
         // Per-platform binary targets — SwiftPM only links the one matching your build platform.
